@@ -1,0 +1,1 @@
+The React client calls a Node 24 engine on a random loopback port. A per-launch bearer token arrives via URL fragment. Tauri owns the engine stdin pipe. Anvil and Forge run as local child processes. SQLite persists evidence independently of the disposable chain.

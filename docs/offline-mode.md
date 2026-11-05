@@ -1,0 +1,1 @@
+The portable runtime includes its own Node, Anvil, Forge and Solidity compiler. Workspace data lives under LOCALAPPDATA/ChainXray/workspaces in portable mode. Closing a chain destroys its current state. Evidence persists across restarts.

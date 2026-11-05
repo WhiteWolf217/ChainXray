@@ -1,0 +1,1 @@
+Each simulation sends one transaction to a process-owned Anvil chain, collects its receipt and call trace, compares sender and recipient balances and storage slot zero, then reverts the snapshot. The slot-zero owner rule applies only to the deployed lab vault.

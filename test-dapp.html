@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ChainXray Test Dapp</title>
+  <style>
+    body {
+      background: #1e1e1e;
+      color: #cccccc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 30px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 { color: #3794ff; font-size: 20px; margin-bottom: 8px; }
+    p { color: #858585; font-size: 13px; line-height: 1.5; }
+    .card {
+      background: #252526;
+      border: 1px solid #333333;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    button {
+      background: #0e639c;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+    button:hover { background: #1177bb; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    pre {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 12px;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      color: #4ec9b0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      min-height: 40px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      background: #264f78;
+      color: #3794ff;
+    }
+  </style>
+</head>
+<body>
+  <h1>◈ ChainXray Test Dapp</h1>
+  <p>Use this page to test wallet request interception, tampering, forwarding, and dropping.</p>
+
+  <div class="card">
+    <div style="margin-bottom: 12px;">
+      <span class="badge" id="accountBadge">Wallet: Not connected</span>
+    </div>
+    <label>Wallet <select id="walletSelect"><option value="legacy">Browser wallet (default)</option></select></label><br><button id="btnConnect">1. Connect Wallet</button><button id="btnSwitch" disabled>Switch to local chain</button><p id="networkStatus">Network: not checked</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0; color:#e1e1e1; font-size:14px;">2. Trigger Test Requests</h3>
+    <p>Enable interception in the ChainXray extension before clicking these:</p>
+    
+    <button id="btnSend" disabled>Send 0.001 ETH</button>
+    <label>Deployed local token address <input id="tokenAddress" placeholder="0x…"></label><br>
+    <button id="btnApprove" disabled>Approve 1,000 Test Tokens</button>
+    <button id="btnSign" disabled>Sign Personal Message</button>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0; color:#e1e1e1; font-size:14px;">Response Output</h3>
+    <pre id="output">Waiting for action…</pre>
+  </div>
+
+  <script>
+    const output = document.getElementById('output');
+    const badge = document.getElementById('accountBadge');
+    const btnConnect = document.getElementById('btnConnect');
+    const btnSend = document.getElementById('btnSend');
+    const btnApprove = document.getElementById('btnApprove');
+    const btnSign = document.getElementById('btnSign');
+
+    let currentAccount = null, provider = null;
+    const wallets = new Map();
+    const selector = document.getElementById('walletSelect');
+    window.addEventListener?.('eip6963:announceProvider', e => {
+      const info=e.detail?.info;
+      if (!info?.uuid || wallets.has(info.uuid) || !e.detail.provider) return;
+      wallets.set(info.uuid,e.detail.provider);
+      const option=document.createElement('option'); option.value=info.uuid; option.textContent=info.name || 'Wallet'; selector.appendChild(option);
+    });
+    window.dispatchEvent?.(new Event('eip6963:requestProvider'));
+    if (location.protocol === 'file:') log('Open this dapp using ChainXray’s Open Browser button. Wallet extensions may not run on file URLs.');
+
+    function log(msg) {
+      output.textContent = typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg;
+    }
+
+    async function requireLocal() {
+      if (!provider) throw Error('Connect a wallet first.');
+      const active=provider;
+      const chain=await active.request({method:'eth_chainId'});
+      if(BigInt(chain)!==31337n) throw Error('Select your local development network (chain 31337).');
+      const accounts=await active.request({method:'eth_accounts'});
+      if(active!==provider)throw Error('Wallet changed. Connect the selected wallet and retry.');
+      if(!accounts[0]) throw Error('Connect a test account first.');
+      currentAccount=accounts[0];
+      return {wallet:active,account:currentAccount};
+    }
+    const observed = new WeakSet();
+    const switchButton=document.getElementById('btnSwitch');
+    let revision=0;
+    async function refreshConnection() {
+      const active=provider, version=++revision;
+      btnSend.disabled=btnApprove.disabled=btnSign.disabled=true;
+      const accounts=await active.request({method:'eth_accounts'});
+      if(active!==provider || version!==revision) return;
+      currentAccount=accounts[0] || null;
+      badge.textContent=currentAccount ? 'Connected: '+currentAccount.slice(0,6)+'…'+currentAccount.slice(-4) : 'Wallet: Not connected';
+      if(!currentAccount){switchButton.disabled=true;document.getElementById('networkStatus').textContent='Network: connect an account first';return;}
+      document.getElementById('networkStatus').textContent='Network: checking…';
+      const chain=await active.request({method:'eth_chainId'});
+      if(active!==provider || version!==revision)return;
+      const local=BigInt(chain)===31337n;
+      switchButton.disabled=local;
+      btnSend.disabled=btnApprove.disabled=btnSign.disabled=!local;
+      document.getElementById('networkStatus').textContent=local ? 'Local chain 31337 — ready for testing' : 'Wallet connected · current chain '+BigInt(chain).toString()+'. Select local chain 31337 to enable tests.';
+      log(local?'Connected and ready: '+currentAccount:'Connected to wallet. Switch to local chain 31337; no need to reconnect.');
+    }
+    function watch(active) {
+      if(observed.has(active))return; observed.add(active);
+      for(const event of ['chainChanged','accountsChanged','disconnect'])active.on?.(event,()=>{if(active===provider)return refreshConnection().catch(e=>log('Wallet status: '+e.message));});
+    }
+    selector.onchange=()=>{
+      revision++;provider=null;currentAccount=null;
+      badge.textContent='Wallet changed — connect selected wallet';
+      document.getElementById('networkStatus').textContent='Connect the selected wallet before testing.';
+      btnSend.disabled=btnApprove.disabled=btnSign.disabled=switchButton.disabled=true;
+      log('Wallet selection changed. Click Connect Wallet to use this wallet.');
+    };
+    btnConnect.onclick=async()=>{
+      btnConnect.disabled=true;
+      try {
+        provider=wallets.get(selector.value)||window.ethereum;
+        if(!provider)throw Error('No wallet found. Unlock your browser wallet and reload.');
+        watch(provider);
+        await provider.request({method:'eth_requestAccounts'});
+        await refreshConnection();
+      }catch(err){log('Wallet connection/status: '+err.message);}
+      finally{btnConnect.disabled=false;}
+    };
+    switchButton.onclick=async()=>{
+      try {if(!provider)throw Error('Connect your wallet first.');await provider.request({method:'wallet_switchEthereumChain',params:[{chainId:'0x7a69'}]});await refreshConnection();}
+      catch(err){log(err.code===4902?'Add the local network in your wallet using the RPC URL shown on ChainXray Home, then switch to it.':'Network switch: '+err.message);}
+    };
+
+    btnSend.onclick = async () => {
+      try {
+        const {wallet,account}=await requireLocal();
+        log('Initiating eth_sendTransaction (0.001 ETH)... Check ChainXray Intercept tab!');
+        const txHash = await wallet.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: account,
+            to: account,
+            value: '0x38d7ea4c68000' // 0.001 ETH in hex wei
+          }]
+        });
+        log('Transaction accepted by wallet! Hash:\n' + txHash);
+      } catch (err) {
+        log('Result: ' + (err.code === 4001 ? 'Request DROPPED / REJECTED (code 4001)' : err.message));
+      }
+    };
+
+    btnApprove.onclick = async () => {
+      try {
+        const {wallet,account}=await requireLocal();
+        log('Initiating ERC-20 approve() call... Check ChainXray Intercept tab!');
+        const token=document.getElementById('tokenAddress').value.trim();
+        if(!/^0x[0-9a-fA-F]{40}$/.test(token)) throw Error('Enter your deployed local token address.');
+        const code=await wallet.request({method:'eth_getCode',params:[token,'latest']});
+        if(!code || /^0x0*$/.test(code)) throw Error('No contract deployed at this address on the local chain.');
+        const rawDecimals=await wallet.request({method:'eth_call',params:[{to:token,data:'0x313ce567'},'latest']});
+        const decimals=BigInt(rawDecimals);
+        if(decimals<0n || decimals>74n) throw Error('Unsupported token decimals.');
+        const amount=1000n*10n**decimals;
+        const calldata='0x095ea7b3'+account.slice(2).padStart(64,'0')+amount.toString(16).padStart(64,'0');
+        const check=await requireLocal();
+        if(check.wallet!==wallet || check.account.toLowerCase()!==account.toLowerCase())throw Error('Wallet or account changed while preparing approval. Retry.');
+        const txHash = await wallet.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: account,
+            to: token,
+            data: calldata
+          }]
+        });
+        log('Approval transaction submitted (confirmation still pending)! Hash:\n' + txHash);
+      } catch (err) {
+        log('Result: ' + (err.code === 4001 ? 'Request DROPPED / REJECTED (code 4001)' : err.message));
+      }
+    };
+
+    btnSign.onclick = async () => {
+      try {
+        const {wallet,account}=await requireLocal();
+        log('Initiating personal_sign message... Check ChainXray Intercept tab!');
+        const message = '0x' + Array.from(new TextEncoder().encode('Hello ChainXray!')).map(b => b.toString(16).padStart(2, '0')).join('');
+        const signature = await wallet.request({
+          method: 'personal_sign',
+          params: [message, account]
+        });
+        log('Signature received:\n' + signature);
+      } catch (err) {
+        log('Result: ' + (err.code === 4001 ? 'Request DROPPED / REJECTED (code 4001)' : err.message));
+      }
+    };
+  </script>
+</body>
+</html>
+

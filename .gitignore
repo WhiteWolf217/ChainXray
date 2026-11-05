@@ -1,0 +1,8 @@
+node_modules/
+.chainxray/
+dist/
+src-tauri/target/
+src-tauri/resources/
+.build-tools/
+.pnpm-store/
+release/

@@ -1,0 +1,1 @@
+Use only disposable test accounts and authorized targets. Provider exports and evidence archives can contain signatures and wallet activity. Keep them local. Report reproducible security problems privately to the project maintainer.

@@ -1,0 +1,1 @@
+Run the lab integration test before submitting engine changes. Preserve simulation rollback, original requests, evidence integrity and loopback-only defaults. Include a local fixture for each new finding rule.

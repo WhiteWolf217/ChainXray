@@ -1,0 +1,1 @@
+If loopback connections are blocked, allow the workbench to reach its own 127.0.0.1 listener. If simulation refuses a sender, capture a fresh takeover after starting the chain. A new chain creates new accounts. If the browser reports an invalid token, use the complete URL printed by the active launcher.

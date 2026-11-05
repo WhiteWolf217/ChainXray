@@ -1,0 +1,1 @@
+SQLite evidence includes workspace, session, chain, timestamp, input, output and a SHA-256 identifier over the serialized record. Restore verifies every hash inside a single transaction. Hashes detect changes but do not establish authorship.

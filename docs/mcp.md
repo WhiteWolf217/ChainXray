@@ -1,0 +1,3 @@
+Configure an MCP stdio client with command node, arguments engine/mcp.ts and the workspace name, and cwd pointing to this project. Set CHAINXRAY_HOME to the desktop workspace directory to read the same evidence. The MCP process supervises a separate disposable lab for simulation. Use list_evidence followed by get_evidence and cite the returned id in investigation answers.
+
+The packaged stdio command is node.exe engine/mcp.mjs vault-lab from the portable directory. In the workbench, choose an evidence row under AI Investigator to request an explanation from a locally installed Ollama model. The explanation stores the original evidence ID and an unverified flag.

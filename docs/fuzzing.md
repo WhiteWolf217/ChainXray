@@ -1,0 +1,1 @@
+Intruder accepts a JSON object with a cases array of up to 32 unsigned transaction edits. One case runs at a time. Each uses its own snapshot. Cancellation and the 30-second campaign budget are checked between cases. RPC operations have a five-second timeout.

@@ -1,0 +1,53 @@
+import {chromium} from 'playwright-core';
+import {spawn} from 'node:child_process';
+import {createInterface} from 'node:readline';
+import {createServer} from 'node:http';
+import {mkdtempSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve} from 'node:path';
+import assert from 'node:assert/strict';
+const root=resolve('release/ChainXray Desktop/resources');
+const proc=spawn(process.execPath,['engine/server.mjs','--parent-pipe'],{cwd:root,windowsHide:true,stdio:['pipe','pipe','inherit'],env:{...process.env,CHAINXRAY_HOME:mkdtempSync(join(tmpdir(),'cx-flow-'))}});
+const local=createServer((q,r)=>{r.setHeader('Content-Type','text/html');r.end(`<button id="send">Send local test request</button><output id="result"></output><script>window.calls=[];window.ethereum={request:async r=>{calls.push(r);return 'test-provider-result'}};document.querySelector('#send').onclick=()=>ethereum.request({method:'eth_sendTransaction',params:[{from:'0x1111111111111111111111111111111111111111',to:'0x2222222222222222222222222222222222222222',value:'0x1'}]}).then(r=>document.querySelector('#result').textContent=r,e=>document.querySelector('#result').textContent='dropped:'+e.code);</script>`)});
+await new Promise(r=>local.listen(0,'127.0.0.1',r));let context;
+try{
+ const url=await new Promise(r=>createInterface({input:proc.stdout}).once('line',r));
+ context=await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(),'cx-ext-')),{executablePath:resolve('runtime/browsers/chromium-1248/chrome-win64/chrome.exe'),headless:true,ignoreDefaultArgs:['--disable-extensions'],args:[`--load-extension=${resolve('apps/browser-extension')}`]});
+ const worker=context.serviceWorkers()[0]??await context.waitForEvent('serviceworker');const id=new URL(worker.url()).host;
+ const app=await context.newPage();await app.goto(url);await app.getByRole('button',{name:'Create or reopen',exact:true}).click();
+ const token=new URL(url).hash.slice(1);const api=async(action,payload={})=>{const r=await fetch(new URL('/api',url),{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({action,payload})});if(!r.ok)throw Error(await r.text());return r.json()};
+ const pair=await api('pair');const dapp=await context.newPage();await dapp.goto(`http://127.0.0.1:${local.address().port}`);
+ const popup=await context.newPage();await popup.goto(`chrome-extension://${id}/popup.html`);
+ const targetId=await worker.evaluate(async port=>(await chrome.tabs.query({})).find(t=>t.url?.startsWith('http://127.0.0.1:'+port)).id,local.address().port);
+ // An extension page stands in for the toolbar popup; point activeTab lookup at the test dapp.
+ await popup.evaluate(id=>{chrome.tabs.query=async()=>[{id}]},targetId);
+ await popup.locator('#pair').fill(pair);await popup.locator('#intercept').click();await popup.getByText(/Interception enabled for/).waitFor();
+ await dapp.evaluate(()=>window.addEventListener('message',e=>{if(e.data?.kind==='cx-hold') window.postMessage({kind:'cx-result',id:e.data.id,result:{status:'forward',request:e.data.request}},location.origin);}));
+ await app.getByRole('button',{name:'Intercept',exact:true}).click();await dapp.locator('#send').click();await app.getByRole('button',{name:'Forward',exact:true}).waitFor();
+ await app.getByRole('button',{name:'Send to Repeater',exact:true}).click();await app.getByRole('heading',{name:'Repeater',exact:true}).waitFor();assert.equal((await api('intercept_list')).length,1);assert.equal(await dapp.evaluate(()=>calls.length),0);
+ await app.getByRole('button',{name:'Intercept',exact:true}).click();await app.getByRole('button',{name:'Forward',exact:true}).click();await dapp.getByText('test-provider-result',{exact:true}).waitFor();assert.equal(await dapp.evaluate(()=>calls.length),1);
+ await dapp.locator('#send').click();await app.getByRole('button',{name:'Drop',exact:true}).click();await dapp.getByText('dropped:4001',{exact:true}).waitFor();assert.equal(await dapp.evaluate(()=>calls.length),1);
+ const evidence=(await api('state')).rows.filter(r=>r.kind==='capture');
+ assert.equal(evidence.length,4);
+ assert.deepEqual(evidence.map(r=>r.input.interception.status).sort(),['drop','forward','held','held']);
+ assert.ok(evidence.every(r=>r.input.origin.includes('127.0.0.1')));
+ await app.getByRole('button',{name:'Web3 History',exact:true}).click();
+ await app.waitForFunction(()=>document.querySelectorAll('.record').length===4);
+ await api('capture',{method:'eth_chainId',params:[]});
+ await app.waitForFunction(()=>document.querySelectorAll('.record').length===5);
+ console.log('PASS: intercepted requests and decisions persist in history; history refreshes live.');
+ const paired=async(action,payload)=>{const r=await fetch(new URL('/api',url),{method:'POST',headers:{authorization:'Bearer '+new URL(pair).hash.slice(1),'content-type':'application/json'},body:JSON.stringify({action,payload})});return {status:r.status,body:await r.json()}};
+ for(let i=0;i<497;i++)assert.equal((await paired('capture',{method:'eth_chainId',params:[]})).status,200);
+ const last=await paired('intercept',{request:{method:'personal_sign',params:[]},origin:'local-test'});assert.equal(last.status,200);
+ assert.equal((await paired('intercept_poll',{id:last.body.id})).body.status,'held');
+ await api('intercept_decide',{id:last.body.id,decision:'drop'});
+ assert.equal((await paired('intercept_poll',{id:last.body.id})).body.status,'drop');
+ assert.equal((await paired('capture',{method:'eth_chainId',params:[]})).status,429);
+ await api('pair');
+ const stale=await popup.evaluate(()=>chrome.runtime.sendMessage({kind:'cx-check'}));
+ assert.equal(stale.status,'error');assert.match(stale.error,/pairing expired or was replaced/);
+ console.log('PASS: stale pairing is reported as a connection error.');
+ console.log('PASS: final pairing-budget request can resolve; new requests rejected.');
+ console.log('PASS: packaged engine + real extension bridge + held request + Repeater copy + forward + drop (local test provider).');
+}finally{await context?.close();proc.stdin.end();local.close();}
+

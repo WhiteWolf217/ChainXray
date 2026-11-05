@@ -1,0 +1,17 @@
+Install Node 24 and pnpm, then run pnpm install --frozen-lockfile. The Windows x64 solc 0.8.30 executable belongs at runtime/solc.exe. Run node scripts/build.mjs to build the UI and stage the portable runtime in src-tauri/resources. Use pnpm build with Rust and a Windows linker installed to build Tauri. Preserve the full resources directory when distributing the application.
+
+For wallet capture, enable developer mode in your Chromium browser and load apps/browser-extension as an unpacked extension. Open the dApp tab with a wallet provider and select Capture this tab. Use Stop and export JSON to save the session. To import directly too, choose Pair browser capture in Web3 History and paste the link into the extension immediately before stopping capture. Links expire after 15 minutes or 500 requests and are revoked when the workspace changes. Refresh history to see the new records.
+
+## Dedicated browser
+Open a workspace, then click **Open Browser**. This launches bundled Chromium with an isolated persistent profile, MetaMask, and ChainXray Provider Capture. Complete MetaMask onboarding yourself. On the target dapp tab, open the ChainXray extension and choose **Enable wallet interception** before connecting the dapp. Its pairing link is prefilled. Reload the tab to remove interception. Pairing expires after 15 minutes; reopening the browser action refreshes the pairing file, so reopen the extension popup to enable it again.
+
+The desktop workbench remains a standalone app. The browser profile is stored alongside workspace data, separately from your everyday Chrome/MetaMask profile. The browser stays open if the workbench closes; pending intercepted calls fail closed when the engine becomes unavailable. Wallet-to-node RPC interception is not yet implemented.
+
+## Other wallets
+Interception discovers EIP-6963 providers and legacy window.ethereum providers without wallet-brand checks. Install your preferred Chromium wallet extension in the dedicated browser, enable wallet interception on the dapp tab, and choose that wallet in the dapp. MetaMask remains bundled as a default, but is not required by interception or browser startup. Other installed extensions are no longer disabled by the launcher.
+
+Compatibility is limited to injected EVM providers whose request method can be wrapped. Read-only providers are reported as unsupported. Enable before the dapp caches a provider method. WalletConnect sessions, separate wallet applications, non-EVM wallets, and transfers initiated inside wallet UI are not covered by this browser hook. Generic-provider tests use test doubles; individual wallet products still require end-to-end verification.
+
+Interception decisions are authenticated with a per-tab HMAC key passed directly into the isolated and main execution worlds, not through page messages. Forged or altered cx-result messages are ignored. This protects the decision bridge; it does not make an injected JavaScript provider hook a security boundary against a page that retains an original provider reference or tampers with the runtime before installation. Reload existing tabs before enabling the updated extension.
+
+The standalone test-dapp.html requires chain 31337 before its actions. ETH transfers return to the connected test account. Approval tests require an entered deployed token address, check contract code, and read decimals. Chain ID checks are guardrails, not proof of a node's identity; use your local test-wallet profile.

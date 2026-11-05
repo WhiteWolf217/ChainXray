@@ -1,0 +1,30 @@
+{
+  "productName": "ChainXray",
+  "version": "0.1.0",
+  "identifier": "local.chainxray.desktop",
+  "build": {
+    "frontendDist": "../dist",
+    "beforeBuildCommand": "node scripts/build.mjs",
+    "beforeDevCommand": "node scripts/build.mjs"
+  },
+  "app": {
+    "windows": []
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "resources": [
+      "resources/"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "offlineInstaller"
+      },
+      "nsis": {
+        "installerHooks": "installer-hooks.nsh"
+      }
+    }
+  }
+}

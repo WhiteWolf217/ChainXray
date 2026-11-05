@@ -1,0 +1,32 @@
+{
+  "name": "chainxray-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node engine/server.ts",
+    "test": "node --test tests/*.test.ts tests/*.test.mjs",
+    "desktop": "tauri dev",
+    "build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-windows.ps1",
+    "ui": "vite build"
+  },
+  "dependencies": {
+    "@arkiv-network/sdk": "^1.0.1",
+    "@foundry-rs/anvil-win32-amd64": "^1.7.1",
+    "@foundry-rs/forge-win32-amd64": "^1.7.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "solc": "0.8.30",
+    "viem": "^2.30.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.5.0",
+    "playwright-core": "^1.64.1",
+    "prettier": "^3.9.10",
+    "vite": "^7.0.0"
+  }
+}
