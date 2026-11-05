@@ -1,8 +1,54 @@
+# Dependencies and downloaded toolchains
 node_modules/
+/.pnpm-store/
+/.build-tools/
+/runtime/
+
+# Generated desktop builds and release packages
+/dist/
+/release/
+/src-tauri/target/
+/src-tauri/resources/
+/src-tauri/gen/
+/.review-build/
+/work/
+*.tsbuildinfo
+
+# Local evidence, Chromium profiles and extension pairing credentials
 .chainxray/
-dist/
-src-tauri/target/
-src-tauri/resources/
-.build-tools/
-.pnpm-store/
-release/
+/.browser-smoke/
+browser-profile/
+/browser-extension/
+pair.json
+*.sqlite
+*.sqlite-*
+*.db-wal
+*.db-shm
+
+# Credentials (keep sanitized setup examples versioned)
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+.envrc
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Test output and local logs
+/coverage/
+/test-results/
+/playwright-report/
+/blob-report/
+*.log
+*.dmp
+
+# OS and editor temporary files
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~

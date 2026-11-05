@@ -21,7 +21,7 @@ document.getElementById('intercept').onclick = async () => {
         if(e.source!==window || e.data?.kind!=='cx-hold') return;
         const id=e.data.id;
         let result;
-        try { result=await chrome.runtime.sendMessage({kind:'cx-intercept',request:e.data.request}); }
+        try { result=await chrome.runtime.sendMessage({kind:'cx-intercept',request:e.data.request,chainId:e.data.chainId}); }
         catch { result={status:'error',error:'Extension connection lost. Repair the extension connection, reload the dapp and enable interception again.'}; }
         const body=JSON.stringify({id,result:result??{status:'error',error:'No response from the extension background worker. Repair extension connection and reload the dapp.'}});
         const mac=Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',signingKey,new TextEncoder().encode(body))));
@@ -30,7 +30,7 @@ document.getElementById('intercept').onclick = async () => {
       return true;
     }});
     if(bridge[0]?.result===false) {status.textContent='Already enabled. Reload the dapp to reconnect or change pairing.';return;}
-    const injection = await chrome.scripting.executeScript({target:{tabId:tab.id},world:'MAIN',args:[secret],func:async(secret)=>{
+    const injection = await chrome.scripting.executeScript({target:{tabId:tab.id},world:'MAIN',args:[secret,health.expectedChainId??null],func:async(secret,expectedChainId)=>{
       const verify=crypto.subtle.verify.bind(crypto.subtle);
       const verificationKey=await crypto.subtle.importKey('raw',new Uint8Array(secret),{name:'HMAC',hash:'SHA-256'},false,['verify']);
       const key=Symbol.for('chainxray.intercept');
@@ -44,6 +44,8 @@ document.getElementById('intercept').onclick = async () => {
         if(typeof original!=='function') return;
         const intercepted=async function(request){
           if(!/^(eth_sendTransaction|eth_sendRawTransaction|eth_signTypedData(?:_v[134])?|personal_sign|eth_sign)$/.test(request.method)) return original.call(provider,request);
+          let chainId=null;
+          if(expectedChainId){chainId=await original.call(provider,{method:'eth_chainId'});if(chainId!==expectedChainId)throw Object.assign(new Error('ChainXray Sepolia session: select Ethereum Sepolia (11155111) in your wallet.'),{code:4901});}
           const id=crypto.randomUUID();
           const result=await new Promise(resolve=>{
             const listener=async e=>{if(e.source!==window || e.data?.kind!=='cx-result' || e.data.id!==id) return;
@@ -55,10 +57,11 @@ document.getElementById('intercept').onclick = async () => {
             };
             const timer=setTimeout(()=>{window.removeEventListener('message',listener);resolve({status:'error',error:'Interception timed out after five minutes.'});},300000);
             window.addEventListener('message',listener);
-            window.postMessage({kind:'cx-hold',id,request:{method:request.method,params:request.params??[]}},location.origin);
+            window.postMessage({kind:'cx-hold',id,chainId,request:{method:request.method,params:request.params??[]}},location.origin);
           });
           if(result?.status==='error')throw Object.assign(new Error(result.error),{code:-32000});
           if(result?.status!=='forward') throw Object.assign(new Error('Request dropped by ChainXray'),{code:4001});
+          if(expectedChainId && await original.call(provider,{method:'eth_chainId'})!==expectedChainId)throw Object.assign(new Error('Wallet network changed while held. Switch to Sepolia and create a new request.'),{code:4901});
           return original.call(provider,result.request);
         };
         try { provider.request=intercepted; if(provider.request!==intercepted) throw Error('Read-only provider'); wrapped.add(provider); report.connected++; }
@@ -73,7 +76,7 @@ document.getElementById('intercept').onclick = async () => {
       return report;
     }});
     const report=injection[0]?.result;
-    status.textContent=report?.connected ? 'ChainXray v0.1.2 connected. Interception enabled for '+report.connected+' wallet provider(s). Choose your wallet in the dapp. Reload this tab to disable.' : 'Listening for wallet providers. No compatible writable provider found yet. Unlock your wallet, then enable again before connecting the dapp.';
+    status.textContent=report?.connected ? 'ChainXray v0.1.3 connected. Interception enabled for '+report.connected+' wallet provider(s). '+(health.expectedChainId?'Ethereum Sepolia required. ':'')+'Choose your wallet in the dapp. Reload this tab to disable.' : 'Listening for wallet providers. No compatible writable provider found yet. Unlock your wallet, then enable again before connecting the dapp.';
     if(report?.unsupported) status.textContent+=' Some providers are read-only and could not be intercepted.';
   } catch(e) {status.textContent=String(e);}
 };

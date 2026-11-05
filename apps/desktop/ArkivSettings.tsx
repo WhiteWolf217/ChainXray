@@ -1,0 +1,7 @@
+import React,{useState,useEffect} from 'react';
+export function ArkivSettings({api}:any){
+ const [testKey,setTestKey]=useState(''),[accessKey,setAccessKey]=useState(''),[status,setStatus]=useState<any>({}),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ useEffect(()=>{api('arkiv_status').then(setStatus).catch((e:any)=>setError(String(e)));},[]);
+ const configure=async(clear=false)=>{setBusy(true);setError('');try{setStatus(await api('arkiv_configure',clear?{clear:true}:{testKey,accessKey}));setTestKey('');setAccessKey('');}catch(e){setError(String(e));}finally{setBusy(false);}};
+ return <details><summary>Arkiv connection · {status.configured?'publisher configured':'read access / publisher setup'}</summary><p>Rabdi testnet · chain 7794095. Use a dedicated test account with test GLM only. Settings stay in engine memory and are not saved in reports. Environment settings remain available after clearing session overrides.</p><label>Dedicated test account private key<input type="password" autoComplete="off" value={testKey} onChange={e=>setTestKey(e.target.value)}/></label><label>Arkiv access key (optional)<input type="password" autoComplete="off" value={accessKey} onChange={e=>setAccessKey(e.target.value)}/></label><button disabled={busy||(!testKey&&!accessKey)} onClick={()=>configure()}>Use for this session</button><button disabled={busy} onClick={()=>configure(true)}>Clear session settings</button>{status.publisher&&<p>Publisher: {status.publisher}</p>}<p role="status">{error}</p></details>;
+}

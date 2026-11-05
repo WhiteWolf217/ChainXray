@@ -47,6 +47,19 @@ try{
  const stale=await popup.evaluate(()=>chrome.runtime.sendMessage({kind:'cx-check'}));
  assert.equal(stale.status,'error');assert.match(stale.error,/pairing expired or was replaced/);
  console.log('PASS: stale pairing is reported as a connection error.');
+ const sepoliaPair=await api('pair',{network:'sepolia'});
+ await dapp.reload();
+ await dapp.evaluate(()=>{const request=ethereum.request;ethereum.request=async r=>r.method==='eth_chainId'?'0xaa36a7':request(r);});
+ await popup.locator('#pair').fill(sepoliaPair);await popup.locator('#intercept').click();await popup.getByText(/Ethereum Sepolia required/).waitFor();
+ await dapp.locator('#send').click();
+ await app.getByRole('button',{name:'Intercept',exact:true}).click();
+ await app.getByRole('button',{name:'Forward',exact:true}).waitFor();
+ await app.waitForFunction(()=>!Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='Forward')?.disabled);
+ const held=(await api('intercept_list'))[0];assert.equal(held.chainId,'0xaa36a7');
+ await app.getByRole('button',{name:'Drop',exact:true}).click();await dapp.getByText('dropped:4001',{exact:true}).waitFor();
+ assert.ok((await api('state')).rows.some(r=>r.kind==='capture'&&r.chainId==='11155111'));
+ await app.getByRole('button',{name:'Live Dapps',exact:true}).click();await app.getByRole('heading',{name:'Live dapp testing · Ethereum Sepolia'}).waitFor();
+ console.log('PASS: Sepolia pairing, extension chain checks, captured chain metadata and Live Dapps screen.');
  console.log('PASS: final pairing-budget request can resolve; new requests rejected.');
  console.log('PASS: packaged engine + real extension bridge + held request + Repeater copy + forward + drop (local test provider).');
 }finally{await context?.close();proc.stdin.end();local.close();}

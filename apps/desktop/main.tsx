@@ -1,5 +1,7 @@
 import { Evidence, markdown } from "./Evidence";
 import { UniswapPanel } from './UniswapPanel';
+import { ArkivSettings } from './ArkivSettings';
+import { LiveDapps } from './LiveDapps';
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
@@ -46,6 +48,7 @@ const pages = [
   "Reports",
   "Shared Findings",
   "Uniswap API",
+  "Live Dapps",
 ];
 const pretty = (x: any) => JSON.stringify(x, null, 2);
 function SharedFindings({rows}:any){
@@ -66,7 +69,7 @@ function HeldRequest({row,onError,onRepeater}:any) {
  return <article><div><button disabled={busy} onClick={()=>decide('forward')}>Forward</button><button disabled={busy} onClick={()=>decide('drop')}>Drop</button><button disabled={busy} onClick={send}>Send to Repeater</button></div><p>{row.origin} · {row.request.method}</p><textarea aria-label="Intercepted request" rows={16} value={draft} onChange={e=>setDraft(e.target.value)}/><p>Forwarding can lead to a transaction on the wallet’s selected network. Held requests expire after five minutes.</p></article>;
 }
 function App() {
-  const [page, setPage] = useState("Home"),
+  const [page, setPage] = useState("Live Dapps"),
     [state, setState] = useState<any>({ rows: [], lab: {}, workspaces: [] }),
     [name, setName] = useState("vault-lab"),
     [draft, setDraft] = useState("{}"),
@@ -415,7 +418,9 @@ function App() {
               </section>
             )}
             {page === 'Shared Findings' && <SharedFindings rows={rows}/>}
+            {page === 'Shared Findings' && <section><ArkivSettings api={api}/></section>}
             {page === 'Uniswap API' && <UniswapPanel api={api} onEvidence={async(row:any)=>{setSelected(row);await refresh();}}/>}
+            {page === 'Live Dapps' && <LiveDapps api={api}/>}
           </>
         )}
         {selected && (

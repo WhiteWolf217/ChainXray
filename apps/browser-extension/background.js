@@ -11,8 +11,8 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       if (!r.ok) {if(r.status===403)throw Error('ChainXray pairing expired or was replaced. Click Open Browser in the desktop app, then enable interception again.');if(r.status===429)throw Error('Pairing request limit reached. Click Open Browser to pair again.');throw Error('ChainXray engine error ('+r.status+').');}
       return r.json();
     };
-    if(message.kind==='cx-check'){await call('intercept_poll',{id:'connection-check'});return {status:'ready'};}
-    const {id} = await call('intercept', {request:message.request, origin:sender.url});
+    if(message.kind==='cx-check'){const config=await call('intercept_poll',{id:'connection-check'});return {status:'ready',expectedChainId:config.expectedChainId??null};}
+    const {id} = await call('intercept', {request:message.request, chainId:message.chainId,origin:sender.url});
     for (let i=0;i<300;i++) {
       const result = await call('intercept_poll',{id});
       if(result.status !== 'held') return result;

@@ -6,6 +6,7 @@ import {
   readFileSync,
   readdirSync,
   existsSync,
+  rmSync,
 } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve, join, basename } from "node:path";
@@ -13,6 +14,7 @@ const require = createRequire(import.meta.url);
 const esbuild = createRequire(require.resolve("vite/package.json"))("esbuild");
 const out = resolve("src-tauri/resources");
 mkdirSync(join(out, "engine"), { recursive: true });
+rmSync(join(out, 'test-dapp.html'), {force:true});
 for (const name of ["server", "mcp"]) {
   await esbuild.build({
     entryPoints: ["engine/" + name + ".ts"],
@@ -26,15 +28,8 @@ for (const name of ["server", "mcp"]) {
     },
   });
 }
-// Embed the test page so a partially copied or locked resource cannot break it.
-const serverBundle = join(out, "engine", "server.mjs");
-const serverSource = readFileSync(serverBundle, "utf8");
-const lookup = 'await readFile(fileURLToPath2(new URL("../test-dapp.html", import.meta.url)))';
-if (!serverSource.includes(lookup)) throw Error("Could not locate test dapp lookup in staged engine");
-writeFileSync(serverBundle, serverSource.replace(lookup, 'Buffer.from(' + JSON.stringify(readFileSync("test-dapp.html", "utf8")) + ', "utf8")'));
 for (const name of [
   "dist",
-  "test-dapp.html",
   "fixtures",
   "apps/browser-extension",
   "runtime",

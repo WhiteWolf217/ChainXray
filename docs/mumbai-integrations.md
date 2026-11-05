@@ -18,6 +18,8 @@ Replay uses the existing local simulator. A real Uniswap deployment or suitable 
 
 ## Arkiv
 
+Desktop setup: open **Shared Findings**, expand **Arkiv connection**, enter a dedicated funded Rabdi test private key and optional access key, and choose **Use for this session**. Querying only needs an access key when the public RPC is insufficient. Settings are held in local engine memory, are not written to evidence, and disappear at exit. **Clear session settings** removes overrides; environment credentials, if configured, still apply. Raw SDK network errors are replaced with generic messages to avoid exposing credential-bearing RPC URLs.
+
 Shared Findings creates a fixed allowlisted summary from decoded swap evidence. Preview it, then export offline or publish explicitly. No raw request, wallet address, signature, origin, calldata or free-form text is copied into the summary.
 
 Configure CHAINXRAY_ARKIV_TEST_KEY as a dedicated funded Rabdi test account and ARKIV_ACCESS_KEY as the optional RPC access key before launching. Neither is sent to the UI. Writes use SDK createEntity and expire after seven days. Query by publisher wallet retrieves up to 25 matching schema entities. Public observations are unverified claims; expiration does not erase third-party copies.

@@ -203,7 +203,7 @@ export function controller(root: string) {
         ...decoded,
         warnings,
         finding: warnings[0] ?? null,
-      });
+      }, typeof p.captureChainId==='string' && /^0x[0-9a-f]{1,16}$/i.test(p.captureChainId) ? BigInt(p.captureChainId).toString() : 'unknown');
     }
     if (action === "simulate")
       return ws.record(action, p, await lab.simulate(p));

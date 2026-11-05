@@ -13,7 +13,7 @@ A local Web3 investigation workbench for Windows x64. A disposable Anvil chain, 
 ## Run the lab
 For the standalone Windows workbench, open **release/ChainXray Desktop/ChainXray.exe**. Keep its `resources` folder alongside it. This opens a native application window, without a Chrome tab. Windows WebView2 Runtime is required. Run `node scripts/package-desktop.mjs` to refresh this package using the existing native executable and current application resources; rebuild the native executable first if Rust code changes.
 
-MetaMask testing currently uses a separate browser with the included extension. A bundled testing browser is not included yet.
+Open Browser launches the bundled Chromium with the ChainXray extension and MetaMask at the live Uniswap interface. Live Dapps lets you enter another HTTPS dapp URL. Browser sessions currently require Ethereum Sepolia (11155111), selected in the wallet and dapp. The built-in test dapp is no longer served. See [live dapp instructions](docs/live-dapps.md).
 
 Extract the portable ZIP and double-click **Start ChainXray.cmd**. Keep the launcher open while using the workbench. Alternatively, from this directory run `node scripts/build.mjs` then `node engine/server.ts --browser` with Node 24 and dependencies installed.
 

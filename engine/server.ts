@@ -9,23 +9,17 @@ import { stop } from "./lab.ts";
 import { actionEnvelope } from "./validation.ts";
 import { InterceptQueue } from './intercept.ts';
 import { openBrowser } from './browser.ts';
+import { dappTarget } from './dapp-target.ts';
 import {configureUniswapApi,uniswapApiConfigured} from './uniswap-api.ts';
+import {configureArkiv,arkivStatus} from './public-findings.ts';
 const intercept = new InterceptQueue();
 const act = controller(resolve(process.env.CHAINXRAY_HOME ?? ".chainxray"));
 const key = randomBytes(32).toString("hex");
 let captureKey = "",
   captureExpires = 0,
   captureRemaining = 0;
+let expectedChainId:string|null=null;
 const dist = fileURLToPath(new URL("../dist", import.meta.url));
-const dappServer = createServer(async (req, res) => {
-  if (req.method !== 'GET' || req.url !== '/') { res.writeHead(404); res.end(); return; }
-  try {
-    const body = await readFile(fileURLToPath(new URL('../test-dapp.html', import.meta.url)));
-    res.writeHead(200, {'content-type':'text/html; charset=utf-8','cache-control':'no-store','content-security-policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; frame-ancestors 'none'"});
-    res.end(body);
-  } catch { res.writeHead(500); res.end('Test dapp unavailable'); }
-});
-dappServer.listen(0, '127.0.0.1');
 const server = createServer(async (req, res) => {
   const reply = (status: number, body: string, type = "application/json") => {
     res.writeHead(status, {
@@ -64,12 +58,15 @@ const server = createServer(async (req, res) => {
           req.headers.authorization !== "Bearer " + captureKey
         )
           return reply(403, "{}");
-        if (action === "intercept_poll") return reply(200, JSON.stringify(intercept.poll(String(payload.id))));
+        if (action === "intercept_poll") return reply(200, JSON.stringify(payload.id==='connection-check'?{status:'ready',expectedChainId}:intercept.poll(String(payload.id))));
         if (captureRemaining <= 0) return reply(429, JSON.stringify({error:"Pairing request limit reached. Pair again."}));
         captureRemaining--;
         if (action === "intercept") {
           const queued=intercept.add(payload.request,String(payload.origin));
-          try { await act('capture',{...(payload.request as any),origin:String(payload.origin),interception:{id:queued.id,status:'held'}}); }
+          const chainId=typeof payload.chainId==='string'&&/^0x[0-9a-f]{1,16}$/i.test(payload.chainId)?payload.chainId:null;
+          if(expectedChainId&&chainId!==expectedChainId){intercept.rows.delete(queued.id);throw Error('Select Ethereum Sepolia in the wallet, then enable interception again.');}
+          intercept.rows.get(queued.id).chainId=chainId;
+          try { await act('capture',{...(payload.request as any),captureChainId:chainId,origin:String(payload.origin),interception:{id:queued.id,status:'held'}}); }
           catch(error){intercept.rows.delete(queued.id);throw error;}
           return reply(200,JSON.stringify(queued));
         }
@@ -79,23 +76,28 @@ const server = createServer(async (req, res) => {
       if (action === "intercept_list") return reply(200, JSON.stringify(intercept.list()));
       if(action === 'uniswap_configure') return reply(200,JSON.stringify(configureUniswapApi(payload.key)));
       if(action === 'uniswap_status') return reply(200,JSON.stringify({configured:uniswapApiConfigured()}));
+      if(action === 'arkiv_configure') return reply(200,JSON.stringify(configureArkiv(payload)));
+      if(action === 'arkiv_status') return reply(200,JSON.stringify(arkivStatus()));
       if (action === "intercept_decide") {
         const id=String(payload.id), row=intercept.rows.get(id);
         const before=row ? structuredClone(row) : null;
         intercept.decide(id, String(payload.decision), payload.request);
-        try { await act('capture',{...row.request,origin:row.origin,interception:{id,status:String(payload.decision),originalRequest:before.request}}); }
+        try { await act('capture',{...row.request,captureChainId:row.chainId??null,origin:row.origin,interception:{id,status:String(payload.decision),originalRequest:before.request}}); }
         catch(error){if(before)intercept.rows.set(id,before);throw error;}
         return reply(200, "true");
       }
       if (action === "open" || action === "close") { captureKey = ""; intercept.clear(); }
       if (action === "pair" || action === "browser_open") {
+        const destination=dappTarget(payload.url??'https://app.uniswap.org/');
+        if(payload.network!==undefined&&payload.network!=='sepolia')throw Error('Unsupported browser test network');
         if (!(await act("state")).workspace)
           throw Error("Open a workspace first");
         intercept.clear();
+        expectedChainId=payload.network==='sepolia'||action==='browser_open'?'0xaa36a7':null;
         captureKey = randomBytes(32).toString("hex");
         captureRemaining = 500;
         captureExpires = Date.now() + 15 * 60_000;
-        if (action === 'browser_open') return reply(200, JSON.stringify(await openBrowser('http://' + req.headers.host + '/#' + captureKey, 'http://127.0.0.1:' + (dappServer.address() as any).port + '/')));
+        if (action === 'browser_open') return reply(200, JSON.stringify(await openBrowser('http://' + req.headers.host + '/#' + captureKey, destination)));
         return reply(
           200,
           JSON.stringify("http://" + req.headers.host + "/#" + captureKey),

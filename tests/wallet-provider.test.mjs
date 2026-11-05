@@ -27,3 +27,19 @@ test('read-only providers are reported without preventing other wallets',async()
 });
 
 test('missing worker response is identified without blaming the engine',async()=>{const x=await setup([{request:async()=>null}],null);assert.match(x.elements.status.textContent,/background worker/);assert.match(x.elements.status.textContent,/Repair extension connection/);assert.equal(x.holds.length,0);});
+test('Sepolia sessions block wrong networks and hold supported testnet requests',async()=>{
+ let chain='0x1',sent=0;
+ const wallet={request:async r=>r.method==='eth_chainId'?chain:(sent++,'ok')};
+ const env=await setup([wallet],{status:'ready',expectedChainId:'0xaa36a7'});
+ await assert.rejects(wallet.request({method:'eth_sendTransaction',params:[]}),e=>e.code===4901);
+ assert.equal(env.holds.length,0);assert.equal(sent,0);
+ chain='0xaa36a7';assert.equal(await wallet.request({method:'personal_sign',params:[]}), 'ok');
+ assert.equal(env.holds[0].chainId,'0xaa36a7');assert.equal(sent,1);
+});
+test('Sepolia network change while held prevents wallet execution',async()=>{
+ let reads=0,sent=0;
+ const wallet={request:async r=>r.method==='eth_chainId'?(++reads===1?'0xaa36a7':'0x1'):(sent++,'ok')};
+ await setup([wallet],{status:'ready',expectedChainId:'0xaa36a7'});
+ await assert.rejects(wallet.request({method:'personal_sign',params:[]}),e=>e.code===4901);
+ assert.equal(sent,0);
+});
