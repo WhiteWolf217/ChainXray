@@ -564,3 +564,43 @@ footer::before { content:''; width:5px; height:5px; border-radius:50%; backgroun
 .call-failed { background:#2b2023!important; }
 @media(max-width:1000px) { :root { --sidebar-w:190px; } .content-area { padding:24px 22px 48px; } section { padding:20px; } header { padding:12px 22px; gap:10px 16px; } .request-flow .flow-node { min-height:80px; } }
 @media(prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none!important; } }
+
+/* Arkiv connection settings */
+.arkiv-connection { background:#222225; overflow:hidden; }
+.arkiv-connection > summary { display:flex; align-items:center; gap:12px; padding:18px 22px; cursor:pointer; list-style:none; }
+.arkiv-connection > summary::-webkit-details-marker { display:none; }
+.arkiv-connection > summary::before { content:''; width:6px; height:6px; border-right:1.5px solid var(--text-muted); border-bottom:1.5px solid var(--text-muted); transform:rotate(-45deg); margin-right:3px; }
+.arkiv-connection[open] > summary::before { transform:rotate(45deg); }
+.arkiv-heading { color:var(--text-bright); font-size:14px; font-weight:600; flex:1; }
+.arkiv-badge { border:1px solid #454b55; border-radius:20px; padding:3px 10px; font-size:11px; color:#b6c1cf; background:#2a2e35; }
+.arkiv-badge.verified { color:#93d8bd; border-color:#365a4d; background:#25382f; }
+.arkiv-connection > .arkiv-body { padding:22px; border-top:1px solid var(--border); }
+.arkiv-overview { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.arkiv-overview > div { min-width:0; padding:15px 17px; background:#1e1e21; border:1px solid #343439; border-radius:8px; }
+.arkiv-caption { display:block; color:var(--text-muted); font:10px/1.5 var(--sans); letter-spacing:.7px; text-transform:uppercase; }
+.arkiv-overview strong { display:block; color:var(--text-bright); font-size:16px; font-weight:500; margin:7px 0 3px; }
+.arkiv-overview small { color:var(--text-muted); font-size:11px; }
+.arkiv-network-tag { font-size:10px; color:#9ebcdb; background:#293747; border-radius:4px; padding:2px 5px; margin-left:5px; vertical-align:middle; }
+.arkiv-unit { font-size:12px; color:var(--text-muted); }
+.arkiv-publisher { display:flex; align-items:center; flex-wrap:wrap; gap:10px 16px; margin:16px 0 0; padding:12px 3px; }
+.arkiv-publisher code { font:12px/1.7 var(--mono); color:#c6d8ec; overflow-wrap:anywhere; min-width:0; user-select:all; }
+.arkiv-credentials { margin-top:20px; padding-top:20px; border-top:1px solid var(--border); }
+.arkiv-credentials h3 { color:var(--text-bright); font-weight:500; margin:0 0 5px; }
+.arkiv-credentials > p { font-size:12px; color:var(--text-muted); margin:0 0 20px; }
+.arkiv-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.arkiv-fields label { display:block; font-size:12px; color:var(--text); min-width:0; }
+.arkiv-fields input { display:block; width:100%; min-width:0; margin:8px 0 5px; padding:12px; font:12px/1.6 var(--mono); }
+.arkiv-fields label > small { color:var(--text-muted); font-size:11px; }
+.arkiv-optional { color:var(--text-muted); font-size:10px; margin-left:6px; }
+.arkiv-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:22px 0 0; }
+.arkiv-actions button { margin:0; font-size:12px; }
+.arkiv-actions .arkiv-primary { background:#126b9e; border-color:#247fb6; color:#fff; }
+.arkiv-actions .arkiv-clear { margin-left:auto; background:transparent; border-color:transparent; color:var(--text-muted); }
+.arkiv-actions .arkiv-clear:hover { border-color:var(--border-light); color:var(--text-bright); }
+.arkiv-notice { display:flex; gap:12px; align-items:flex-start; margin-top:22px; padding:15px 17px; border:1px solid #355246; border-radius:8px; background:#213029; }
+.arkiv-notice-icon { display:grid; place-items:center; width:21px; height:21px; flex-shrink:0; border-radius:50%; background:#335847; color:#a9e3c8; font-size:12px; }
+.arkiv-notice strong { color:#a9dfc5; font-size:12px; font-weight:500; }
+.arkiv-notice p { margin:3px 0 0; color:#b3c2ba; font-size:11px; line-height:1.7; }
+.arkiv-error { padding:13px 16px; margin-top:20px; background:#332326; border:1px solid #673d44; border-radius:7px; color:#efb7bc; font-size:12px; }
+.arkiv-body > .arkiv-footnote { color:var(--text-muted); font-size:11px; line-height:1.7; margin:18px 0 0; max-width:100ch; }
+@media(max-width:800px) { .arkiv-overview, .arkiv-fields { grid-template-columns:1fr; } .arkiv-connection > .arkiv-body { padding:16px; } .arkiv-connection > summary { padding:16px; gap:8px; } .arkiv-badge { font-size:10px; } .arkiv-actions .arkiv-clear { margin-left:0; } }

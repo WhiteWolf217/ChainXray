@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {TransactionTracker} from '../engine/tracker.ts';
 const rows=[{kind:'wallet_outcome',chainId:'11155111',input:{sourceEvidence:'capture'},output:{hash:'0x'+'a'.repeat(64)}}];
 test('built-in networks enable Sepolia without user-entered RPC settings',()=>{
- const tracker=new TransactionTracker(()=>[],async()=>({}));try{tracker.enableDefaults();assert.ok(tracker.status().chains.includes('11155111'));assert.equal(new URL(tracker.configs.get('11155111')!).protocol,'https:');assert.ok(!JSON.stringify(tracker.status()).includes('https://'));}finally{tracker.dispose();}
+ const tracker=new TransactionTracker(()=>[],async()=>({}));try{tracker.enableDefaults();assert.ok(tracker.status().chains.includes('11155111'));assert.equal(tracker.configs.get('11155111'),'https://ethereum-sepolia-rpc.publicnode.com');assert.ok(!JSON.stringify(tracker.status()).includes('https://'));}finally{tracker.dispose();}
 });
 test('automatic tracker waits for mining, traces once and keeps RPC credentials private',async()=>{
  let pending=true;const calls:boolean[]=[];

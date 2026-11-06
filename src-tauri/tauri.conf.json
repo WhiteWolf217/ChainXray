@@ -20,10 +20,13 @@
     ],
     "windows": {
       "webviewInstallMode": {
-        "type": "offlineInstaller"
+        "type": "embedBootstrapper"
       },
       "nsis": {
-        "installerHooks": "installer-hooks.nsh"
+        "installerHooks": "installer-hooks.nsh",
+        "installMode": "perMachine",
+        "startMenuFolder": "ChainXray",
+        "compression": "lzma"
       }
     }
   }

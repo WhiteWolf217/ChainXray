@@ -1,4 +1,18 @@
-Install Node 24 and pnpm, then run pnpm install --frozen-lockfile. The Windows x64 solc 0.8.30 executable belongs at runtime/solc.exe. Run node scripts/build.mjs to build the UI and stage the portable runtime in src-tauri/resources. Use pnpm build with Rust and a Windows linker installed to build Tauri. Preserve the full resources directory when distributing the application.
+## Install on a Windows laptop
+
+Use `release/ChainXray-Setup-x64.exe` on Windows 10/11 x64 (Intel/AMD). Run setup, approve the Windows administrator prompt and follow the wizard. Launch ChainXray from the Start menu after installation. This package targets x64; Windows 7/8, 32-bit Windows and native ARM64 are not validated targets.
+
+The setup includes the application, Node runtime, interactive Chromium, MetaMask extension, Solidity compiler, Anvil and Forge. It embeds the official Microsoft WebView2 bootstrapper and the Visual C++ x64 redistributable so users do not need Node, Rust, developer tools or a separate browser installation. Disk space is needed for both setup extraction and installed browser files. Internet is required during setup if WebView2 must be installed; machines with WebView2 already installed can use the bundled application resources directly. A restart may be required after installing runtime dependencies.
+
+Open or create a workspace, then use **Open Browser**. Wallet onboarding is completed by the user. The packaged browser has a separate profile; existing wallet accounts and private keys are not included. Live dapps, quotes, public RPC reads and Arkiv need internet. Local lab functions can run offline after installation.
+
+The setup is unsigned unless a release signing certificate is configured. Windows can display an unknown-publisher or SmartScreen prompt. Distribute the setup with `ChainXray-Setup-x64.sha256` and verify its source and checksum before running it. A separate clean Windows machine test is still required before promising compatibility across hardware and security policies.
+
+## Build the setup from source
+
+Install Node 24 and pnpm, then run pnpm install --frozen-lockfile. The Windows x64 solc 0.8.30 executable belongs at runtime/solc.exe. Bundled Chromium, MetaMask and VC_redist.x64.exe must be present under runtime/. With the documented Rust/linker tools available, run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-installer.ps1`. The build downloads official NSIS tooling and the WebView2 bootstrapper when they are not cached, produces the setup under release/, and writes its SHA-256 checksum. Installer settings are in src-tauri/tauri.conf.json. Browser testing tools and downloaded ZIP archives are excluded from staged runtime resources.
+
+For a portable folder, run node scripts/package-desktop.mjs and preserve its resources directory beside ChainXray.exe. Portable users must already have WebView2 and any needed Visual C++ runtime installed.
 
 For wallet capture, enable developer mode in your Chromium browser and load apps/browser-extension as an unpacked extension. Open the dApp tab with a wallet provider and select Capture this tab. Use Stop and export JSON to save the session. To import directly too, choose Pair browser capture in Web3 History and paste the link into the extension immediately before stopping capture. Links expire after 15 minutes or 500 requests and are revoked when the workspace changes. Refresh history to see the new records.
 

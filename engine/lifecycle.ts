@@ -7,6 +7,42 @@ export function walletOutcome(p:any){
  if(p.hash!=null&&!/^0x[0-9a-f]{64}$/i.test(p.hash))throw Error('Invalid transaction hash');
  return {sourceEvidence:p.sourceEvidence,status:p.status,hash:p.status==='returned'?p.hash??null:null,code:p.status==='error'&&Number.isSafeInteger(p.code)?p.code:null,source:'page-observed',note:'Wallet response observed by the page hook. Not proof of mining. Signatures are not stored.'};
 }
+// OpenEthereum/Erigon returns flat traces; traceAddress identifies each call's parent.
+export function traceTransactionTree(entries:any,hash:string){
+ const invalid=()=>new LifecycleRpcError('trace_transaction returned an invalid or incomplete call tree.','trace_transaction','response');
+ if(!Array.isArray(entries)||!entries.length)throw invalid();
+ const nodes=new Map<string,any>();
+ for(const entry of entries){
+  const path=entry?.traceAddress,action=entry?.action,result=entry?.result;
+  if(!Array.isArray(path)||!path.every((i:any)=>Number.isSafeInteger(i)&&i>=0)||!action||
+    (entry.transactionHash!=null&&entry.transactionHash.toLowerCase()!==hash.toLowerCase()))throw invalid();
+  const key=path.join('.');if(nodes.has(key))throw invalid();
+  let node:any;
+  if(entry.type==='call'){
+   if(!['call','delegatecall','staticcall','callcode'].includes(action.callType))throw invalid();
+   node={type:action.callType.toUpperCase(),from:action.from,to:action.to,input:action.input,output:result?.output,value:action.value,gas:action.gas,gasUsed:result?.gasUsed};
+  }else if(entry.type==='create'){
+   node={type:'CREATE',from:action.from,to:result?.address,input:action.init,output:result?.code,value:action.value,gas:action.gas,gasUsed:result?.gasUsed};
+  }else if(entry.type==='suicide'){
+   node={type:'SELFDESTRUCT',from:action.address,to:action.refundAddress,value:action.balance};
+  }else throw invalid();
+  nodes.set(key,{...node,error:entry.error,calls:[]});
+ }
+ const root=nodes.get('');if(!root)throw invalid();
+ // Sort siblings numerically, including when the provider returns an unordered list.
+ const ordered=entries.slice().sort((a:any,b:any)=>{
+  const x=a.traceAddress,y=b.traceAddress;
+  for(let i=0;i<Math.min(x.length,y.length);i++)if(x[i]!==y[i])return x[i]-y[i];
+  return x.length-y.length;
+ });
+ for(const entry of ordered){
+  const path=entry.traceAddress;if(!path.length)continue;
+  const parent=nodes.get(path.slice(0,-1).join('.'));
+  if(!parent||path.at(-1)!==parent.calls.length)throw invalid();
+  parent.calls.push(nodes.get(path.join('.')));
+ }
+ return root;
+}
 export async function readLifecycle(rpc:string,chain:string,hash:string,trace:boolean|'transaction'=false,fetcher:typeof fetch=fetch){
  const url=new URL(rpc);
  if(url.username||url.password||url.hash||!(url.protocol==='https:'||(url.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(url.hostname))))throw Error('Use HTTPS RPC or a local HTTP RPC without embedded username/password');
@@ -26,7 +62,18 @@ export async function readLifecycle(rpc:string,chain:string,hash:string,trace:bo
  const actual=await call('eth_chainId',[]);
  if(typeof actual!=='string'||!/^0x[0-9a-f]+$/i.test(actual)||BigInt(actual)!==BigInt(chain))throw Error('RPC network does not match the captured transaction');
  if(trace==='transaction')return {status:'transaction',hash,calls,transaction:await call('eth_getTransactionByHash',[hash]),source:'rpc-transaction'};
- if(trace){const result=await call('debug_traceTransaction',[hash,{tracer:'callTracer',timeout:'10s'}]);if(!result||typeof result!=='object'||!result.type)throw Error('RPC did not return a callTracer tree');return {status:'traced',hash,calls,trace:result,source:'rpc-callTracer'};}
+ if(trace){
+  try{
+   const result=await call('debug_traceTransaction',[hash,{tracer:'callTracer',timeout:'10s'}]);
+   if(!result||typeof result!=='object'||!result.type)throw Error('RPC did not return a callTracer tree');
+   return {status:'traced',hash,calls,trace:result,source:'rpc-callTracer'};
+  }catch(error){
+   if(!(error instanceof LifecycleRpcError)||error.category!=='unsupported')throw error;
+   calls.push({method:'debug_traceTransaction',params:[hash,{tracer:'callTracer',timeout:'10s'}],status:'unsupported'});
+   const result=await call('trace_transaction',[hash]);
+   return {status:'traced',hash,calls,trace:traceTransactionTree(result,hash),source:'rpc-trace_transaction'};
+  }
+ }
  const receipt=await call('eth_getTransactionReceipt',[hash]);
  if(receipt!==null&&(!receipt||receipt.transactionHash?.toLowerCase()!==hash.toLowerCase()||!['0x0','0x1'].includes(receipt.status)))throw Error('Invalid receipt returned by RPC');
  return {status:receipt===null?'pending':receipt.status==='0x1'?'confirmed':'reverted',hash,calls,receipt,source:'rpc-receipt',note:'Receipt reflects this RPC observation; confirmation depth and reorg finality are not tracked.'};

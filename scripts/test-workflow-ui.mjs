@@ -23,6 +23,8 @@ try {
     else if(action==='tracking_status')response={chains:[],transactions:[]};
     else if(action==='uniswap_configure'){configured=true;response={configured};}
     else if(action==='uniswap_quote'){submitted=payload;response={id:'quote-1',input:payload,output:{receivedAt:'now',response:{routing:'CLASSIC',quote:{}},note:'Mock UI quote'}};}
+    else if(action==='arkiv_status')response={configured:true,publisher:wallet,accessKeyConfigured:true};
+    else if(action==='arkiv_check')response={chainId:7794095,publisher:wallet,balance:'10',readable:true};
     else throw Error('Unexpected API action: '+action);
     await route.fulfill({json:response});
   });
@@ -59,8 +61,14 @@ try {
   await page.getByRole('heading',{name:'3. Quote saved'}).waitFor();
   assert.equal(submitted.amount,'1000000000000000');
   assert.equal(submitted.swapper,wallet);
+  await page.getByRole('button',{name:'Share findings',exact:true}).click();
+  await page.getByText('Arkiv connection',{exact:true}).click();
+  await page.getByRole('button',{name:'Test connection',exact:true}).click();
+  await page.getByText('Rabdi reads verified',{exact:true}).waitFor();
+  await page.getByText('Reads verified',{exact:true}).waitFor();
+  if(process.env.CHAINXRAY_ARKIV_SCREENSHOT)await page.locator('.arkiv-connection').screenshot({path:process.env.CHAINXRAY_ARKIV_SCREENSHOT});
   assert.deepEqual(errors,[]);
-  console.log('Workflow UI passed: guided start, advanced navigation, flow inspection, API setup and exact quote amount.');
+  console.log('Workflow UI passed: guided start, navigation, flow inspection, API quote and Arkiv connection diagnostics.');
 } finally {
   await browser?.close();
   await new Promise(resolve=>server.httpServer.close(resolve));

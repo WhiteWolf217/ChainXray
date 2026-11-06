@@ -7,6 +7,8 @@ const out = resolve(process.env.CHAINXRAY_PACKAGE_DIR || 'release/ChainXray Desk
 mkdirSync(out, { recursive: true });
 if (!existsSync(join(out, 'ChainXray.exe'))) copyFileSync(binary, join(out, 'ChainXray.exe'));
 else { const {readFileSync}=await import('node:fs'); if(!readFileSync(binary).equals(readFileSync(join(out,'ChainXray.exe')))) copyFileSync(binary,join(out,'ChainXray.exe')); }
+const loader=resolve('src-tauri/target/release/WebView2Loader.dll');
+if(existsSync(loader))copyFileSync(loader,join(out,'WebView2Loader.dll'));
 cpSync('src-tauri/resources', join(out, 'resources'), { recursive: true });
 writeFileSync(join(out, 'READ ME.txt'), `Launch ChainXray.exe to open the standalone desktop workbench.
 Keep the resources folder beside the executable. No Chrome tab is needed for the workbench.

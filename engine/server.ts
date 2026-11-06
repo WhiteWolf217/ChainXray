@@ -11,7 +11,7 @@ import { InterceptQueue } from './intercept.ts';
 import { openBrowser } from './browser.ts';
 import { dappTarget } from './dapp-target.ts';
 import {configureUniswapApi,uniswapApiConfigured} from './uniswap-api.ts';
-import {configureArkiv,arkivStatus} from './public-findings.ts';
+import {configureArkiv,arkivStatus,checkArkivConnection} from './public-findings.ts';
 const intercept = new InterceptQueue();
 const act = controller(resolve(process.env.CHAINXRAY_HOME ?? ".chainxray"));
 const key = randomBytes(32).toString("hex");
@@ -79,6 +79,7 @@ const server = createServer(async (req, res) => {
       if(action === 'uniswap_status') return reply(200,JSON.stringify({configured:uniswapApiConfigured()}));
       if(action === 'arkiv_configure') return reply(200,JSON.stringify(configureArkiv(payload)));
       if(action === 'arkiv_status') return reply(200,JSON.stringify(arkivStatus()));
+      if(action === 'arkiv_check') return reply(200,JSON.stringify(await checkArkivConnection()));
       if (action === "intercept_decide") {
         const id=String(payload.id), row=intercept.rows.get(id);
         const before=row ? structuredClone(row) : null;

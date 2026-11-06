@@ -32,13 +32,17 @@ for (const name of [
   "dist",
   "fixtures",
   "apps/browser-extension",
-  "runtime",
   "THIRD_PARTY_NOTICES.md",
   "LICENSE",
   "notices",
   "README.md",
 ])
   cpSync(name, join(out, name), { recursive: true });
+// Ship the interactive browser and wallet, without downloaded archives or test-only tools.
+const runtimeOut=resolve(out,'runtime');
+if(!runtimeOut.startsWith(out+String.fromCharCode(92))&&!runtimeOut.startsWith(out+'/'))throw Error('Invalid runtime staging path');
+rmSync(runtimeOut,{recursive:true,force:true});
+cpSync('runtime',runtimeOut,{recursive:true,filter:source=>!source.split(/[\\/]/).some(name=>name==='.links'||name.endsWith('.zip')||/^(chromium_headless_shell-|ffmpeg-|winldd-)/.test(name))});
 copyFileSync(process.execPath, join(out, "node.exe"));
 // Preserve notices from packages included in either JavaScript bundle.
 for (const entry of readdirSync("node_modules/.pnpm", {

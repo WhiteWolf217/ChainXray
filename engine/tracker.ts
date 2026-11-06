@@ -7,7 +7,7 @@ export class TransactionTracker {
   private read:(id:string,rpc:string,trace:boolean)=>Promise<any>;
   constructor(rows:()=>any[],read:(id:string,rpc:string,trace:boolean)=>Promise<any>,interval=10000){this.rows=rows;this.read=read;this.timer=setInterval(()=>void this.tick(),interval);this.timer.unref();}
   reset(){this.generation++;this.configs.clear();this.states.clear();}
-  enableDefaults(){for(const chain of [sepolia,mainnet,base,arbitrum,optimism,polygon])this.configs.set(String(chain.id),chain.rpcUrls.default.http[0]);}
+  enableDefaults(){for(const chain of [sepolia,mainnet,base,arbitrum,optimism,polygon])this.configs.set(String(chain.id),chain.id===sepolia.id?'https://ethereum-sepolia-rpc.publicnode.com':chain.rpcUrls.default.http[0]);}
   dispose(){this.reset();clearInterval(this.timer);}
   configure(chain:string,rpc:string){
     if(!/^\d+$/.test(chain)||BigInt(chain)<=0n)throw Error('Choose a known chain first');
