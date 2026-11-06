@@ -41,6 +41,8 @@ try {
   const click = (text) =>
     page.getByRole("button", { name: text, exact: true }).click();
   await click("Create or reopen");
+  await page.getByText('Advanced tools', {exact:true}).click();
+  await click('Local lab');
   await click("Start chain");
   await click("Deploy vault");
   await click("Capture takeover");
@@ -53,7 +55,7 @@ try {
   await click("Findings");
   await click("Run vault reproduction");
   await page.locator("pre").filter({ hasText: "1 passed" }).waitFor();
-  await click("Frames");
+  await click("Frame admission lab");
   await click("Run Frames");
   await page.locator("pre").filter({ hasText: '"admitted": true' }).waitFor();
   await click("Run Frames");

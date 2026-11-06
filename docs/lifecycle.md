@@ -1,0 +1,19 @@
+# Request lifecycle (extension 0.1.9)
+
+Restart the desktop and every managed Chrome window after installing this update. Open Browser installs the new extension. Existing archived requests do not gain wallet results retroactively.
+
+Request Flow now groups hold/forward/drop evidence with a supported wallet hook's outcome. MetaMask SDK and injected-provider hooks report returned transaction hashes or numeric error codes; signature values are deliberately discarded. Cached MetaMask message-channel calls can still be intercepted but do not yet report wallet outcomes. Page observations are not a trusted proof of execution, and pairing expiry or navigation can interrupt outcome delivery.
+
+Automatic tracking is enabled when a workspace opens for Sepolia, Ethereum, Base, Arbitrum, Optimism and Polygon, using the bundled viem chain definitions public RPC defaults. Saved transaction hashes resume automatically. Custom RPC settings are optional under Advanced. Public RPCs receive transaction hashes and may lack traces or apply rate limits. The engine watches wallet outcomes in the open workspace, calls eth_chainId and eth_getTransactionReceipt every ten seconds until mined, then requests the call trace once. Tracking continues on other screens and pauses after 60 checks. Save RPC settings again to resume or retry with another provider. Workspace changes clear RPC settings and stop tracking. Repeated pending results do not create duplicate evidence. Pending means no receipt was returned; confirmed/reverted describes a single receipt observation, not finality. RPC URLs are not persisted. The RPC service receives the transaction hash.
+
+After a mined receipt, the tracker automatically requests debug_traceTransaction with callTracer. This needs a provider supporting tracing and historical data. It draws nested contract calls, decoded arguments where the ABI is known, gas and errors. Solidity internal functions within one EVM call are not represented. Register additional ABIs through Advanced tools → Contracts. Tree output is bounded to 300 nodes and 32 levels. This is a mined transaction trace; pre-send simulated traces are not implemented.
+
+Uniswap API quotes can be associated with the initial held capture. Their request and response appear in its lifecycle as external reference data. Only the existing V3 quote operation is enabled; the app does not execute swap API operations or infer that a quote was the mined route. Quote requests remain dependent on API network support and liquidity.
+
+Share findings accepts wallet outcome, receipt and trace evidence. Preview/export/publish uses a fixed sanitized summary containing the hook adapter name and event status. Raw requests, hashes, addresses, signatures, RPC credentials and full traces are excluded. Arkiv publication is explicit and requires the configured Rabdi test account; it never happens automatically.
+
+This records the intercepted dapp-to-wallet method and ChainXray's own receipt/trace RPC calls. It does not capture every network request made internally by the wallet, all wallet SDKs, or Uniswap v4 hook execution without a trace.
+
+The lifecycle screen shows wallet errors, hash arrival, pending status, mined outcome and trace availability separately. Reverted calls are highlighted and ABI error data is decoded when known. A caught child revert does not necessarily fail the whole transaction. An unavailable trace never changes a successful receipt into a failure.
+
+Historical captures without a wallet hash cannot be uniquely reconstructed from sender, recipient and calldata. For those entries only, the recovery panel accepts a hash from wallet activity, verifies its chain and forwarded sender/destination/value/calldata (and nonce when captured), then starts automatic tracking. It does not search or infer arbitrary wallet transactions.

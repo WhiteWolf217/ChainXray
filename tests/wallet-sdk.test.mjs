@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {webcrypto} from 'node:crypto';
-async function setup(){
- const events=new Map(),calls=[],holds=[];let signingKey,decision='drop';
- const sdk={invokeMethod:async envelope=>{calls.push(envelope);return 'sdk-result';}};
+async function setup(returnValue='sdk-result'){
+ const events=new Map(),calls=[],holds=[];const outcomes=[];let signingKey,decision='drop';
+ const sdk={invokeMethod:async envelope=>{calls.push(envelope);return returnValue;}};
  const window={__METAMASK_CONNECT_MULTICHAIN_SINGLETON__:Promise.resolve(sdk),addEventListener:(n,f)=>events.set(n,[...(events.get(n)??[]),f]),removeEventListener:(n,f)=>events.set(n,(events.get(n)??[]).filter(x=>x!==f)),postMessage:message=>{
-  holds.push(message);queueMicrotask(async()=>{const body=JSON.stringify({id:message.id,result:{status:decision,request:{...message.request,params:[{value:'0x2'}]}}});const mac=Array.from(new Uint8Array(await webcrypto.subtle.sign('HMAC',signingKey,new TextEncoder().encode(body))));for(const f of events.get('message')??[])await f({source:window,data:{kind:'cx-sdk-result',id:message.id,body,mac}});});
+  if(message.kind==='cx-sdk-outcome'){outcomes.push(message);return;}holds.push(message);queueMicrotask(async()=>{const body=JSON.stringify({id:message.id,result:{status:decision,sourceEvidence:decision==='forward'?'capture-1':undefined,request:{...message.request,params:[{value:'0x2'}]}}});const mac=Array.from(new Uint8Array(await webcrypto.subtle.sign('HMAC',signingKey,new TextEncoder().encode(body))));for(const f of events.get('message')??[])await f({source:window,data:{kind:'cx-sdk-result',id:message.id,body,mac}});});
  }};
  const chrome={scripting:{executeScript:async spec=>{
   if(spec.world==='MAIN')return [{result:await spec.func(...spec.args)}];
@@ -16,7 +16,7 @@ async function setup(){
  const context={window,chrome,crypto:webcrypto,Uint8Array,TextEncoder,Symbol,BigInt,location:{origin:'https://app.uniswap.org'},setTimeout,clearTimeout,setInterval:fn=>{queueMicrotask(fn);return 1;},clearInterval:()=>{}};
  runInNewContext(readFileSync('apps/browser-extension/sdk-activation.js','utf8'),context);
  await context.activateChainXraySdk({id:1},{expectedChainId:'0xaa36a7'});await new Promise(r=>setImmediate(r));
- return {sdk,calls,holds,forward:()=>decision='forward'};
+ return {sdk,calls,holds,outcomes,forward:()=>decision='forward'};
 }
 test('MetaMask SDK invocation is held and dropped before its direct Chrome port executes',async()=>{
  const {sdk,calls,holds}=await setup();
@@ -32,4 +32,12 @@ test('SDK wrong-network calls are blocked and read requests pass through',async(
  const env=await setup();await assert.rejects(env.sdk.invokeMethod({scope:'eip155:1',request:{method:'personal_sign',params:[]}}),e=>e.code===4901);
  assert.equal(env.holds.length,0);assert.equal(env.calls.length,0);
  assert.equal(await env.sdk.invokeMethod({scope:'eip155:11155111',request:{method:'eth_accounts'}}),'sdk-result');assert.equal(env.calls.length,1);
+});
+
+test('SDK reports a correlated transaction hash while leaving signature results out of telemetry',async()=>{
+ const hash='0x'+'a'.repeat(64);const env=await setup(hash);env.forward();
+ assert.equal(await env.sdk.invokeMethod({scope:'eip155:11155111',request:{method:'eth_sendTransaction',params:[]}}),hash);
+ assert.equal(env.outcomes[0].sourceEvidence,'capture-1');assert.equal(env.outcomes[0].hash,hash);
+ await env.sdk.invokeMethod({scope:'eip155:11155111',request:{method:'personal_sign',params:[]}});
+ assert.equal(env.outcomes[1].hash,null);
 });

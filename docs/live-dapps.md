@@ -10,7 +10,7 @@ For the injected-provider path, MetaMask calls through cached original methods a
 
 Uniswap gets a document-start provider shim so cached provider requests can still be intercepted. Managed Uniswap tabs automatically check pairing and activate interception on each navigation/reload. The popup checks the current page's hook status. Other HTTPS origins still use the existing manual hook. wallet_sendCalls batches are held too; they are not yet decoded or expanded into Repeater cases.
 
-After updating: close every managed Chrome for Testing window and the desktop, restart the desktop, open a workspace, then click Open Browser. The popup must report v0.1.8. For Uniswap's MetaMask SDK connection, check for **MetaMask SDK active**; an active injected provider or message channel alone does not establish SDK coverage. The Repair button displays restart instructions; it no longer reloads the command-line extension in place. Existing loaded pages cannot acquire a document-start hook retroactively.
+After updating: close every managed Chrome for Testing window and the desktop, restart the desktop, open a workspace, then click Open Browser. The popup must report v0.1.9. For Uniswap's MetaMask SDK connection, check for **MetaMask SDK active**; an active injected provider or message channel alone does not establish SDK coverage. The Repair button displays restart instructions; it no longer reloads the command-line extension in place. Existing loaded pages cannot acquire a document-start hook retroactively.
 
 The app starts in Live Dapps. The header Open Browser button opens https://app.uniswap.org/ directly. There is no built-in test-page server. This means real hosted dapps on Sepolia, not a switch to Ethereum mainnet.
 
@@ -27,7 +27,7 @@ Keep the desktop running during capture. Pairing expires after 15 minutes and ac
 
 Other wallet SDKs, WalletConnect, wallet-internal transfers and cached original methods in unsupported integrations may bypass interception. Outside Uniswap, enable the extension on each dapp tab and again after navigation/reload. If the wallet prompts immediately, cancel and check the extension before assuming capture works.
 
-Live Uniswap may use Universal Router. Raw requests and typed-data signatures are captured, but the v3 SwapRouter decoder does not decode all Universal Router commands. Repeater uses the local lab: it does not automatically fork Sepolia or reproduce remote state. Wallet result/receipt tracking is not implemented.
+Live Uniswap may use Universal Router. Raw requests and typed-data signatures are captured, but the v3 SwapRouter decoder does not decode all Universal Router commands. Repeater uses the local lab: it does not automatically fork Sepolia or reproduce remote state. Extension 0.1.9 adds supported wallet outcomes and automatic receipt/trace tracking; see [lifecycle coverage and limits](lifecycle.md).
 
 Uniswap lists Ethereum Sepolia as a supported interface testnet: https://developers.uniswap.org/docs/trading/swapping-api/supported-chains
 

@@ -15,7 +15,9 @@ For the standalone Windows workbench, open **release/ChainXray Desktop/ChainXray
 
 Open Browser launches the bundled Chromium with the ChainXray extension and MetaMask at the live Uniswap interface. Live Dapps lets you enter another HTTPS dapp URL. Browser sessions currently require Ethereum Sepolia (11155111), selected in the wallet and dapp. The built-in test dapp is no longer served. See [live dapp instructions](docs/live-dapps.md).
 
-Extension 0.1.8 supports both injected wallet requests and Uniswap's MetaMask SDK connection. The live Sepolia ETH-to-WETH wrap was captured in Intercept and rejected with Drop. Signing stays in the wallet; live SDK forwarding through execution is not yet verified. No Uniswap API key is needed for browser interception.
+Extension 0.1.9 supports both injected wallet requests and Uniswap's MetaMask SDK connection. The live Sepolia ETH-to-WETH wrap was captured in Intercept and rejected with Drop. Signing stays in the wallet; live SDK forwarding through execution is not yet verified. No Uniswap API key is needed for browser interception.
+
+Start in **Get started**, then use **Intercept → Request history → Request Flow** to inspect a capture. Request Flow shows the recorded source, method, wallet and destination as clickable blocks; it does not infer execution traces. Local lab, frame admission, campaigns and contract tools are under **Advanced tools**. The Uniswap API page guides key setup, quote parameters and saved results, with an optional token amount calculator. AI Investigator has been removed.
 
 Extract the portable ZIP and double-click **Start ChainXray.cmd**. Keep the launcher open while using the workbench. Alternatively, from this directory run `node scripts/build.mjs` then `node engine/server.ts --browser` with Node 24 and dependencies installed.
 
@@ -26,6 +28,8 @@ Extract the portable ZIP and double-click **Start ChainXray.cmd**. Keep the laun
 5. Under **Findings**, run the Forge reproduction. Select the resulting evidence to see the Solidity test and output.
 6. Export the workspace under **Reports**. Create another workspace and restore the JSON there.
 
-**Frames** accepts the bundled JSON fixture. Run it twice to observe the nonce rejection. **Web3 History** accepts provider request JSON and browser capture exports.
+Under **Advanced tools**, **Frame admission lab** accepts the bundled JSON fixture. Run it twice to observe the nonce rejection. **Request history** accepts provider request JSON and browser capture exports.
 
 Run `npm test` for the TypeScript and JavaScript test suites with Node 24 and the documented local lab dependencies installed. Build the native desktop with `pnpm build` on Windows with a Rust toolchain, linker and WebView2. See docs/installation.md for prerequisites.
+
+See [request lifecycle](docs/lifecycle.md) for correlated wallet outcomes, automatic receipt tracking, contract call traces, linked Uniswap quotes and sanitized Arkiv sharing.

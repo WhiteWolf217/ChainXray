@@ -54,19 +54,20 @@ const server = createServer(async (req, res) => {
       );
       if (paired) {
         if (
-          !["capture", "intercept", "intercept_poll"].includes(action) ||
+          !["capture", "intercept", "intercept_poll", "wallet_outcome"].includes(action) ||
           req.headers.authorization !== "Bearer " + captureKey
         )
           return reply(403, "{}");
         if (action === "intercept_poll") return reply(200, JSON.stringify(payload.id==='connection-check'?{status:'ready',expectedChainId}:intercept.poll(String(payload.id))));
         if (captureRemaining <= 0) return reply(429, JSON.stringify({error:"Pairing request limit reached. Pair again."}));
         captureRemaining--;
+        if(action==='wallet_outcome') return reply(200,JSON.stringify(await act(action,payload)));
         if (action === "intercept") {
           const queued=intercept.add(payload.request,String(payload.origin));
           const chainId=typeof payload.chainId==='string'&&/^0x[0-9a-f]{1,16}$/i.test(payload.chainId)?payload.chainId:null;
           if(expectedChainId&&chainId!==expectedChainId){intercept.rows.delete(queued.id);throw Error('Select Ethereum Sepolia in the wallet, then enable interception again.');}
           intercept.rows.get(queued.id).chainId=chainId;
-          try { await act('capture',{...(payload.request as any),captureChainId:chainId,origin:String(payload.origin),interception:{id:queued.id,status:'held'}}); }
+          try { const capture=await act('capture',{...(payload.request as any),captureChainId:chainId,origin:String(payload.origin),interception:{id:queued.id,status:'held',hook:payload.hook==='metamask-sdk'?'metamask-sdk':payload.hook==='injected-provider'?'injected-provider':'metamask-message-channel'}}); intercept.rows.get(queued.id).sourceEvidence=capture.id; }
           catch(error){intercept.rows.delete(queued.id);throw error;}
           return reply(200,JSON.stringify(queued));
         }

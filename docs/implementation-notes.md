@@ -124,8 +124,6 @@ capability.
   matching configured chain, explicit `SUBMIT <chain>` confirmation, checks
   `eth_chainId`, submits the raw transaction, and distinguishes rejection from
   transport uncertainty.
-- `investigate.ts` — loopback-only Ollama `/api/generate` call. It marks model
-  output `verified: false` and gives the model no execution/tool privileges.
 - `mcp.ts` — minimal line-delimited JSON-RPC MCP-like server exposing evidence,
   simulation, fuzzing, lab start, and deployment actions. It is not yet based
   on the MCP SDK and does not advertise schemas/transport behavior as fully as
