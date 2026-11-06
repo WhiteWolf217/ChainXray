@@ -1,9 +1,12 @@
+importScripts('activation.js');
+importScripts('sdk-activation.js');
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (!['cx-intercept','cx-check'].includes(message.kind) || (message.kind==='cx-intercept' && !sender.tab)) return;
+  if (!['cx-intercept','cx-check','cx-auto-enable'].includes(message.kind) || (message.kind!=='cx-check' && !sender.tab)) return;
   (async () => {
     const stored=await chrome.storage.session.get(['pair','managedPair']);
     let config=stored.pair;
-    if(stored.managedPair){try{const r=await fetch(chrome.runtime.getURL('pair.json'),{cache:'no-store'});if(r.ok)config=(await r.json()).pair;}catch{}} 
+    if(message.kind==='cx-auto-enable' && new URL(sender.url).origin!=='https://app.uniswap.org')throw Error('Automatic activation is limited to Uniswap');
+    if(stored.managedPair||message.kind==='cx-auto-enable'){try{const r=await fetch(chrome.runtime.getURL('pair.json'),{cache:'no-store'});if(r.ok){config=(await r.json()).pair;if(message.kind==='cx-auto-enable')await chrome.storage.session.set({pair:config,managedPair:true});}}catch{}}
     if (!config) throw Error('Pair ChainXray first');
     const url = new URL(config);
     const call = async (action, payload) => {
@@ -12,6 +15,12 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       return r.json();
     };
     if(message.kind==='cx-check'){const config=await call('intercept_poll',{id:'connection-check'});return {status:'ready',expectedChainId:config.expectedChainId??null};}
+    if(message.kind==='cx-auto-enable'){
+      const health=await call('intercept_poll',{id:'connection-check'});
+      const report=await activateChainXray(sender.tab,health);
+      await chrome.storage.session.set({['tab-status-'+sender.tab.id]:{...report,version:'0.1.8'}});
+      return {status:'ready',...report};
+    }
     const {id} = await call('intercept', {request:message.request, chainId:message.chainId,origin:sender.url});
     for (let i=0;i<300;i++) {
       const result = await call('intercept_poll',{id});

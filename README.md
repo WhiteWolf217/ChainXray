@@ -15,6 +15,8 @@ For the standalone Windows workbench, open **release/ChainXray Desktop/ChainXray
 
 Open Browser launches the bundled Chromium with the ChainXray extension and MetaMask at the live Uniswap interface. Live Dapps lets you enter another HTTPS dapp URL. Browser sessions currently require Ethereum Sepolia (11155111), selected in the wallet and dapp. The built-in test dapp is no longer served. See [live dapp instructions](docs/live-dapps.md).
 
+Extension 0.1.8 supports both injected wallet requests and Uniswap's MetaMask SDK connection. The live Sepolia ETH-to-WETH wrap was captured in Intercept and rejected with Drop. Signing stays in the wallet; live SDK forwarding through execution is not yet verified. No Uniswap API key is needed for browser interception.
+
 Extract the portable ZIP and double-click **Start ChainXray.cmd**. Keep the launcher open while using the workbench. Alternatively, from this directory run `node scripts/build.mjs` then `node engine/server.ts --browser` with Node 24 and dependencies installed.
 
 1. Open **Workspace setup** and create `vault-lab`.
@@ -26,4 +28,4 @@ Extract the portable ZIP and double-click **Start ChainXray.cmd**. Keep the laun
 
 **Frames** accepts the bundled JSON fixture. Run it twice to observe the nonce rejection. **Web3 History** accepts provider request JSON and browser capture exports.
 
-Run `node --test tests/*.test.ts` for the integration suite. Build the native desktop with `pnpm build` on Windows with a Rust toolchain, linker and WebView2. See docs/installation.md for prerequisites.
+Run `npm test` for the TypeScript and JavaScript test suites with Node 24 and the documented local lab dependencies installed. Build the native desktop with `pnpm build` on Windows with a Rust toolchain, linker and WebView2. See docs/installation.md for prerequisites.

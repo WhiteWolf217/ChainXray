@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
-import { existsSync, readdirSync, mkdirSync, cpSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import {stageBrowserExtension} from './browser-extension.ts';
 function find(root: string, name: string): string | undefined {
   if (!existsSync(root)) return;
   for (const item of readdirSync(root, {withFileTypes:true})) {
@@ -15,9 +16,7 @@ export async function openBrowser(pair: string, dappUrl: string) {
   if(!chrome) throw Error('Bundled Chromium is missing. Rebuild the desktop browser package.');
   const home=resolve(process.env.CHAINXRAY_HOME ?? '.chainxray');
   const extension=join(home,'browser-extension');
-  mkdirSync(extension,{recursive:true});
-  cpSync(resolve('apps/browser-extension'),extension,{recursive:true});
-  writeFileSync(join(extension,'pair.json'),JSON.stringify({pair}));
+  stageBrowserExtension(resolve('apps/browser-extension'),extension,pair);
   const wallet=walletManifest?.slice(0,-'manifest.json'.length);
   const extensions=[extension,...(wallet?[wallet]:[])].join(',');
   const child=spawn(chrome,[`--user-data-dir=${join(home,'browser-profile')}`,`--load-extension=${extensions}`,'--no-first-run','--no-default-browser-check',dappUrl],{stdio:'ignore'});
