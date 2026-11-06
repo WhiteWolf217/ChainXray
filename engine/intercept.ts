@@ -29,7 +29,7 @@ export class InterceptQueue {
     const row = this.rows.get(id);
     if (!row) return { status: 'drop' };
     if (row.status !== 'held') this.rows.delete(id);
-    return { status: row.status, request: row.request };
+    return { status: row.status, request: row.request, sourceEvidence: row.sourceEvidence };
   }
   clear() { this.rows.clear(); }
 }

@@ -2,6 +2,7 @@ import { Evidence, markdown } from "./Evidence";
 import { UniswapPanel } from './UniswapPanel';
 import { ArkivSettings } from './ArkivSettings';
 import { LiveDapps } from './LiveDapps';
+import { RequestFlow } from './RequestFlow';
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
@@ -29,32 +30,14 @@ function save(name: string, body: string) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-const pages = [
-  "Home",
-  "Intercept",
-  "Workspace setup",
-  "Sessions",
-  "Web3 History",
-  "Decoder",
-  "Repeater",
-  "Intruder",
-  "Scanner",
-  "Contracts",
-  "Simulator",
-  "Protocol Graph",
-  "Findings",
-  "AI Investigator",
-  "Frames",
-  "Reports",
-  "Shared Findings",
-  "Uniswap API",
-  "Live Dapps",
-];
+const pages = ['Live Dapps', 'Intercept', 'Web3 History', 'Request Flow', 'Decoder', 'Repeater', 'Uniswap API', 'Findings', 'Reports', 'Shared Findings'];
+const advancedPages = ['Home', 'Workspace setup', 'Sessions', 'Intruder', 'Scanner', 'Contracts', 'Simulator', 'Frames'];
+const pageLabels: Record<string, string> = { 'Live Dapps': 'Get started', 'Web3 History': 'Request history', Home: 'Local lab', Frames: 'Frame admission lab', 'Shared Findings': 'Share findings' };
 const pretty = (x: any) => JSON.stringify(x, null, 2);
 function SharedFindings({rows}:any){
  const [id,setId]=useState(''),[preview,setPreview]=useState<any>(null),[owner,setOwner]=useState(''),[result,setResult]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const execute=async(fn:any)=>{setBusy(true);setError('');try{await fn();}catch(e){setError(String(e));}finally{setBusy(false);}};
- return <section><h2>Share a sanitized observation</h2><p>Only the exact fields in the preview leave this device. Raw captures remain local. Published data is public; seven-day expiration does not erase copies.</p><select value={id} onChange={e=>{setId(e.target.value);setPreview(null);}}><option value="">Select decoded swap evidence</option>{rows.filter((r:any)=>r.output?.uniswap).map((r:any)=><option key={r.id} value={r.id}>{r.id.slice(0,12)} · {r.output.functionName}</option>)}</select><button disabled={busy||!id} onClick={()=>execute(async()=>setPreview(await api('public_preview',{id})))}>Preview public fields</button>{preview&&<><pre>{pretty(preview)}</pre><button disabled={busy} onClick={()=>execute(async()=>setResult(await api('arkiv_publish',{id,confirmation:JSON.stringify(preview)})))}>Publish preview to Rabdi testnet</button><button onClick={()=>save('public-observation.json',pretty(preview))}>Export sanitized JSON offline</button></>}<h2>Find published observations</h2><input aria-label="Publisher wallet" placeholder="Publisher wallet address" value={owner} onChange={e=>setOwner(e.target.value)}/><button disabled={busy} onClick={()=>execute(async()=>setResult(await api('arkiv_query',{owner})))}>Query Arkiv</button><p>{error}</p>{result&&<pre>{pretty(result)}</pre>}</section>;
+ return <section><h2>Share a sanitized observation</h2><p>Only the exact fields in the preview leave this device. Raw captures remain local. Published data is public; seven-day expiration does not erase copies.</p><select value={id} onChange={e=>{setId(e.target.value);setPreview(null);}}><option value="">Select swap or lifecycle evidence</option>{rows.filter((r:any)=>r.output?.uniswap || ["wallet_outcome","receipt_read","trace_read"].includes(r.kind)).map((r:any)=><option key={r.id} value={r.id}>{r.id.slice(0,12)} · {r.output.functionName || r.kind}</option>)}</select><button disabled={busy||!id} onClick={()=>execute(async()=>setPreview(await api('public_preview',{id})))}>Preview public fields</button>{preview&&<><pre>{pretty(preview)}</pre><button disabled={busy} onClick={()=>execute(async()=>setResult(await api('arkiv_publish',{id,confirmation:JSON.stringify(preview)})))}>Publish preview to Rabdi testnet</button><button onClick={()=>save('public-observation.json',pretty(preview))}>Export sanitized JSON offline</button></>}<h2>Find published observations</h2><input aria-label="Publisher wallet" placeholder="Publisher wallet address" value={owner} onChange={e=>setOwner(e.target.value)}/><button disabled={busy} onClick={()=>execute(async()=>setResult(await api('arkiv_query',{owner})))}>Query Arkiv</button><p>{error}</p>{result&&<pre>{pretty(result)}</pre>}</section>;
 }
 function InterceptPanel({onRepeater}:any) {
  const [rows,setRows]=useState<any[]>([]),[error,setError]=useState(''),[selected,setSelected]=useState('');
@@ -81,7 +64,7 @@ function App() {
     refresh().catch((e) => setNotice(e.message));
   }, []);
   useEffect(() => {
-    if(page !== 'Web3 History' || !state.workspace) return;
+    if(!['Web3 History', 'Request Flow'].includes(page) || !state.workspace) return;
     const timer=setInterval(()=>refresh().catch(e=>setNotice(String(e))),1000);
     refresh().catch(e=>setNotice(String(e)));
     return ()=>clearInterval(timer);
@@ -183,16 +166,18 @@ function App() {
           <button
             key={p}
             className={p === page ? "on" : ""}
+            aria-current={p === page ? 'page' : undefined}
             onClick={() => navigate(p)}
           >
-            {p}
+            {pageLabels[p] || p}
           </button>
         ))}
+        <details className="advanced-nav"><summary>Advanced tools</summary>{advancedPages.map(p => <button key={p} className={p === page ? 'on' : ''} aria-current={p === page ? 'page' : undefined} onClick={() => navigate(p)}>{pageLabels[p] || p}</button>)}</details>
       </aside>
       <main>
         <header>
           {button("Open Browser", () => run("browser_open"))}
-          <span>{lab.running ? "● Local lab running" : "Local lab stopped"}</span>
+          <span>{lab.running ? "● Local lab running" : "Ethereum Sepolia capture"}</span>
           <span>Wallet network is controlled by your wallet</span>
           <span>
             {state.devnet
@@ -202,13 +187,14 @@ function App() {
         </header>
         <div className="content-area">
         <small>{workspace || "NO WORKSPACE"} / WORKBENCH</small>
-        <h1 style={{padding:0}}>{page}</h1>
+        <h1 style={{padding:0}}>{pageLabels[page] || page}</h1>
         <div className="target">
-          Target · {lab.target || "No contract deployed"}
+          {['Home', 'Repeater', 'Simulator', 'Intruder', 'Frames'].includes(page) ? 'Local lab target · ' + (lab.target || 'No contract deployed') : 'Capture and inspect wallet requests · Ethereum Sepolia'}
         </div>
         {(page === "Workspace setup" || !workspace) && (
           <section>
             <h2>Open a local workspace</h2>
+            <p>A workspace saves your captured requests and debugging results on this device. Choose a name to begin or reopen a previous workspace.</p>
             <input
               list="names"
               value={name}
@@ -226,6 +212,7 @@ function App() {
         {workspace && (
           <>
             {page === "Intercept" && <InterceptPanel onRepeater={(tx:any) => { setDraft(pretty(tx)); setPage("Repeater"); setSelected(null); setNotice("Copied to Repeater. Original request remains held in Intercept."); }} />}
+            {page === 'Request Flow' && <RequestFlow rows={rows} api={api} onRefresh={refresh} onRepeater={(tx:any) => { setDraft(pretty(tx)); setPage('Repeater'); setSelected(null); }}/>}
             {page === "Home" && (
               <>
                 <section>
@@ -256,7 +243,7 @@ function App() {
             )}
             {page === "Web3 History" && (
               <section>
-                <h2>Provider request history</h2><p>Intercepted requests and Forward/Drop decisions are saved automatically. Wallet execution results are not yet captured by interception. Each entry keeps the address used at capture time; switching wallets does not rewrite older entries.</p>
+                <h2>Provider request history</h2><p>Intercepted requests and Forward/Drop decisions are saved automatically. Open Request Flow for supported wallet outcomes and manual receipt/trace reads. Each entry keeps the address used at capture time; switching wallets does not rewrite older entries.</p>
                 {button("Pair browser capture", async () => {
                   const code = await api("pair");
                   prompt(
@@ -362,31 +349,12 @@ function App() {
                 )}
               </section>
             )}
-            {page === "Protocol Graph" && (
-              <section>
-                <h2>Observed transaction edges</h2>
-                {rows
-                  .filter((r) => r.input?.params?.[0]?.to || r.output?.to)
-                  .map((r) => (
-                    <p key={r.id}>
-                      <code>
-                        {r.output.from ||
-                          r.input.params?.[0]?.from ||
-                          "provider"}{" "}
-                        → {r.output.to || r.input.params?.[0]?.to}
-                      </code>
-                    </p>
-                  ))}
-              </section>
-            )}
-            {["AI Investigator", "Findings"].includes(page) && (
+            {page === "Findings" && (
               <section>
                 <h2>
-                  {page === "Findings"
-                    ? "Deterministic findings"
-                    : "Evidence available to MCP agents"}
+                  Deterministic findings
                 </h2>
-                {list(page === "Findings" ? findings : rows)}
+                {list(findings)}
                 {button("Run vault reproduction", () => run("reproduce"))}
               </section>
             )}
@@ -419,8 +387,8 @@ function App() {
             )}
             {page === 'Shared Findings' && <SharedFindings rows={rows}/>}
             {page === 'Shared Findings' && <section><ArkivSettings api={api}/></section>}
-            {page === 'Uniswap API' && <UniswapPanel api={api} onEvidence={async(row:any)=>{setSelected(row);await refresh();}}/>}
-            {page === 'Live Dapps' && <LiveDapps api={api}/>}
+            {page === 'Uniswap API' && <UniswapPanel api={api} rows={rows} onEvidence={async()=>{await refresh();}}/>}
+            {page === 'Live Dapps' && <LiveDapps api={api} onNavigate={navigate}/>}
           </>
         )}
         {selected && (
@@ -446,12 +414,6 @@ function App() {
                 typeof selected.input.params[0] !== "object") && (
                 <p>This provider call has no editable transaction envelope.</p>
               )}
-            {page === "AI Investigator" &&
-              button("Explain with local Ollama", () => {
-                const model = prompt("Installed Ollama model");
-                if (model)
-                  return run("investigate", { model, id: selected.id });
-              })}
             {selected.kind === "frame" &&
               button("Download replay test", () =>
                 save("frame-replay.mjs", selected.output.test),

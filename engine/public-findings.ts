@@ -26,6 +26,11 @@ export const Findings=defineSchema('chainxray.findings.v1',{protocol:str().index
 // Deliberate allowlist: never export requests, addresses, signatures or free-form evidence.
 export function publicFinding(row:any){
  if(!row) throw Error('Select evidence first');
+ if(['wallet_outcome','receipt_read','trace_read'].includes(row.kind)){
+  const status=['returned','error','pending','confirmed','reverted','traced'].includes(row.output?.status)?row.output.status:'unknown';
+  const hook=['metamask-sdk','injected-provider','metamask-message-channel'].includes(row.output?.hook)?row.output.hook:'unknown';
+  return {protocol:'ethereum',category:'debug-lifecycle',summary:`A local debugging session using ${hook} recorded a ${status} event. Wallet responses are page observations; RPC results reflect a single provider. No raw request, signature, address or hash is included.`};
+ }
  const swap=row.output?.uniswap;
  if(!swap) throw Error('Select a decoded Uniswap swap');
  return {protocol:'uniswap-v3',category:swap.warnings?.length?'zero-minimum-output':'swap-review',summary:swap.warnings?.length?'A decoded swap specified zero minimum output. This is an observation, not proof of exploitation.':'A Uniswap v3-compatible swap was inspected locally. Router identity is unverified.'};

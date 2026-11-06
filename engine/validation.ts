@@ -111,10 +111,6 @@ export const assertActionPayload = (action: string, payload: JsonObject) => {
     case "restore":
       if (!Array.isArray(payload.rows)) throw Error("Expected an evidence rows array");
       return payload;
-    case "investigate":
-      string(payload.id, "Evidence ID is required");
-      string(payload.model, "Ollama model is required");
-      return payload;
     case "decode":
       data(payload.data, "Calldata is required");
       if (payload.abi !== undefined && !Array.isArray(payload.abi))

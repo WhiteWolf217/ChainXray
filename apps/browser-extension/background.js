@@ -1,7 +1,7 @@
 importScripts('activation.js');
 importScripts('sdk-activation.js');
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (!['cx-intercept','cx-check','cx-auto-enable'].includes(message.kind) || (message.kind!=='cx-check' && !sender.tab)) return;
+  if (!['cx-intercept','cx-check','cx-auto-enable','cx-outcome'].includes(message.kind) || (message.kind!=='cx-check' && !sender.tab)) return;
   (async () => {
     const stored=await chrome.storage.session.get(['pair','managedPair']);
     let config=stored.pair;
@@ -18,10 +18,11 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if(message.kind==='cx-auto-enable'){
       const health=await call('intercept_poll',{id:'connection-check'});
       const report=await activateChainXray(sender.tab,health);
-      await chrome.storage.session.set({['tab-status-'+sender.tab.id]:{...report,version:'0.1.8'}});
+      await chrome.storage.session.set({['tab-status-'+sender.tab.id]:{...report,version:'0.1.9'}});
       return {status:'ready',...report};
     }
-    const {id} = await call('intercept', {request:message.request, chainId:message.chainId,origin:sender.url});
+    if(message.kind==='cx-outcome') return call('wallet_outcome',message.outcome);
+    const {id} = await call('intercept', {request:message.request, chainId:message.chainId,origin:sender.url,hook:message.hook});
     for (let i=0;i<300;i++) {
       const result = await call('intercept_poll',{id});
       if(result.status !== 'held') return result;

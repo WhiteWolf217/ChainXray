@@ -5,11 +5,15 @@ globalThis.activateChainXraySdk=async function(tab,health){
   if(globalThis.cxSdkBridge)return false;
   const key=await crypto.subtle.importKey('raw',new Uint8Array(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
   globalThis.cxSdkBridge=true;
+  const released=new Set();
   window.addEventListener('message',async event=>{
+   if(event.source===window&&event.data?.kind==='cx-sdk-outcome'&&released.delete(event.data.sourceEvidence)){
+    try{await chrome.runtime.sendMessage({kind:'cx-outcome',outcome:event.data});}catch{}return;
+   }
    if(event.source!==window||event.data?.kind!=='cx-sdk-hold')return;
    const {id,request,chainId}=event.data;
    let result;
-   try{result=await chrome.runtime.sendMessage({kind:'cx-intercept',request,chainId});}
+   try{result=await chrome.runtime.sendMessage({kind:'cx-intercept',request,chainId,hook:'metamask-sdk'});if(result?.status==='forward'&&result.sourceEvidence)released.add(result.sourceEvidence);}
    catch(error){result={status:'error',error:'SDK interception connection failed: '+String(error)};}
    const body=JSON.stringify({id,result:result??{status:'error',error:'SDK interception worker did not respond'}});
    const mac=Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(body))));
@@ -46,7 +50,11 @@ globalThis.activateChainXraySdk=async function(tab,health){
      });
      if(decision?.status==='error')throw Object.assign(Error(decision.error),{code:-32000});
      if(decision?.status!=='forward')throw Object.assign(Error('Request dropped by ChainXray'),{code:4001});
-     return original.call(this,{...envelope,request:decision.request});
+     try{
+      const result=await original.call(this,{...envelope,request:decision.request});
+      if(decision.sourceEvidence)window.postMessage({kind:'cx-sdk-outcome',sourceEvidence:decision.sourceEvidence,status:'returned',hash:/^(eth_sendTransaction|wallet_sendTransaction|eth_sendRawTransaction)$/.test(request.method)&&typeof result==='string'&&/^0x[0-9a-f]{64}$/i.test(result)?result:null},location.origin);
+      return result;
+     }catch(error){if(decision.sourceEvidence)window.postMessage({kind:'cx-sdk-outcome',sourceEvidence:decision.sourceEvidence,status:'error',code:Number.isInteger(error.code)?error.code:null},location.origin);throw error;}
     }catch(error){report.lastError=String(error.message??error);throw error;}
    };
    if(sdk.invokeMethod===original)throw Error('MetaMask SDK method is read-only');
