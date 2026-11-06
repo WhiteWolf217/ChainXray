@@ -1,8 +1,14 @@
-<!doctype html><meta charset="utf-8" /><title>ChainXray Capture</title>
-<h3>ChainXray</h3>
-<input id="pair" type="password" placeholder="Optional desktop capture link" />
-<button id="start">Capture this tab</button
-><button id="save">Stop and export JSON</button>
-<p id="status"></p>
-<script src="popup.js"></script>
-<button id="repair">Repair extension connection</button><button id="intercept">Enable wallet interception</button><script src="sdk-activation.js"></script><script src="activation.js"></script><script src="intercept.js"></script>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ChainXray · Browser companion</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+ <header><div class="brand-mark" aria-hidden="true">◈</div><div><h1>ChainXray</h1><p>Browser companion</p></div><span class="local-badge">LOCAL</span></header>
+ <main>
+  <section class="connection-card"><div class="eyebrow"><span class="status-dot" aria-hidden="true"></span> TAB STATUS</div><p id="status" role="status" aria-live="polite">Checking this tab. Open a dapp and connect your desktop workspace to begin.</p></section>
+  <button id="intercept" class="primary">Enable wallet interception <span aria-hidden="true">→</span></button>
+  <p class="hint">Review held requests in the desktop app.<br>Forward to your wallet, or Drop to reject.</p>
+  <details><summary>Provider session recording</summary><div class="detail-body"><p>Record provider calls on this tab, then export the session as JSON.</p><div class="button-row"><button id="start">Start recording</button><button id="save">Stop &amp; export</button></div></div></details>
+  <details><summary>Connection settings</summary><div class="detail-body"><label for="pair">Desktop pairing link</label><input id="pair" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a local pairing link"><p>Filled automatically in the managed browser. Pairing links expire after 15 minutes.</p><button id="repair" class="quiet">Connection help</button></div></details>
+ </main>
+ <footer><span>Wallet signing stays in your wallet</span><span>v0.1.9</span></footer>
+ <script src="popup.js"></script><script src="sdk-activation.js"></script><script src="activation.js"></script><script src="intercept.js"></script>
+</body></html>
