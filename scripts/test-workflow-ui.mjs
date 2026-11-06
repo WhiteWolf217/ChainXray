@@ -43,6 +43,7 @@ try {
   await page.getByText('InsufficientOutput',{exact:true}).waitFor();
   assert.equal(await page.locator('.call-failed').count(),1);
   await page.getByRole('heading',{name:'Contract execution flow'}).waitFor();
+  if(process.env.CHAINXRAY_UI_SCREENSHOT){await page.getByRole('heading',{name:'Request Flow',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:process.env.CHAINXRAY_UI_SCREENSHOT});}
   await page.getByRole('button',{name:'Uniswap API',exact:true}).click();
   await page.getByLabel('Uniswap API key',{exact:true}).fill('ui-test-only');
   await page.getByRole('button',{name:'Connect API',exact:true}).click();

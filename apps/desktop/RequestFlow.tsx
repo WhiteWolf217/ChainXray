@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Lifecycle } from './Lifecycle';
+function nodeLabel(value:string){if(/^0x[0-9a-f]{40}$/i.test(value))return value.slice(0,8)+'…'+value.slice(-6);try{if(/^https?:/.test(value))return new URL(value).host;}catch{}return value;}
 
 export function RequestFlow({ rows, onRepeater, api, onRefresh }: any) {
   const [id, setId] = useState('');
@@ -19,7 +20,7 @@ export function RequestFlow({ rows, onRepeater, api, onRefresh }: any) {
   ];
   return <section><h2>Follow a wallet request</h2><p>Select a capture, then click a block to inspect it. Arrows describe the request path, not confirmed on-chain execution.</p>
     <label className="form-label">Captured request<select value={row.id} onChange={e => { setId(e.target.value); setStep(1); }}>{captures.map((r: any) => <option key={r.id} value={r.id}>{r.input.method} · {r.id.slice(0, 10)} · {r.time}</option>)}</select></label>
-    <div className="request-flow" aria-label="Request path">{nodes.map((node, i) => <React.Fragment key={node.title}>{i > 0 && <span className="flow-arrow" aria-hidden="true">→</span>}<button className={'flow-node ' + (step === i ? 'selected' : '')} aria-pressed={step === i} onClick={() => setStep(i)}><small>{i + 1}. {node.title}</small><strong>{node.value}</strong></button></React.Fragment>)}</div>
+    <div className="request-flow" aria-label="Request path">{nodes.map((node, i) => <React.Fragment key={node.title}>{i > 0 && <span className="flow-arrow" aria-hidden="true">→</span>}<button className={'flow-node ' + (step === i ? 'selected' : '')} aria-pressed={step === i} title={node.value} onClick={() => setStep(i)}><small>{i + 1}. {node.title}</small><strong>{nodeLabel(node.value)}</strong></button></React.Fragment>)}</div>
     <div className="flow-detail"><h3>{nodes[step].title}</h3><p>{nodes[step].detail}</p><code>{nodes[step].value}</code></div>
     {status === 'drop' && <p className="status-warning">Dropped: this request was rejected before wallet approval.</p>}
     <details><summary>Full captured request</summary><pre>{JSON.stringify(request, null, 2)}</pre></details>
